@@ -18,7 +18,7 @@
 </template>
 <script setup lang="ts">
 import { inject, Ref } from 'vue'
-import FabricCanvas, { ShapeType } from '@/core'
+import FabricCanvas from '@/core'
 
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 
@@ -36,17 +36,15 @@ function redo() {
 
 // 选择模式
 function chose() {
-    if(!canvas?.value) return;
-    canvas.value.isDrawingMode = false;
+    canvas?.value.setDrawingTool("select")
 }
 // 自由模式
 function draw() {
-    if(!canvas?.value) return
-    canvas.value.drawFreeDraw();
+    canvas?.value.setDrawingTool("pencil")
 }
 // 添加文字
 function addText() {
-    canvas?.value.drawText('投贝直播', {fontSize:50})
+    canvas?.value.setDrawingTool("text")
 }
 // 添加图片
 function addImg(e: any) {
@@ -54,31 +52,31 @@ function addImg(e: any) {
 }
 // 画三角形
 function addTriangle() {
-    canvas?.value.setShapeType(ShapeType.TRIANGLE)
+    canvas?.value.setDrawingTool('triangle')
 }
 // 画圆
 function addCircle() {
-    canvas?.value.setShapeType(ShapeType.CIRCLE)
+    canvas?.value.setDrawingTool("circle")
 }
 // 画椭圆
 function addEllipse() {
-    canvas?.value.setShapeType(ShapeType.ELLIPSE)
+    canvas?.value.setDrawingTool("ellipse")
 }
 // 画矩形
 function addRect() {
-    canvas?.value.setShapeType(ShapeType.RECTANGLE)
+    canvas?.value.setDrawingTool("rectangle")
 }
 // 画线
 function drawingLine(isArrow: boolean) {
     if(isArrow) {
-        canvas?.value.drawArrow(10, 50, 100, 150, { stroke: 'blue', strokeWidth: 2 });
+        canvas?.value.setDrawingTool("arrow")
     } else {
-        canvas?.value.drawLine(10, 10, 100, 100, { stroke: 'red', strokeWidth: 2 });
+        canvas?.value.setDrawingTool("line")
     }
 }
 // 橡皮擦
 function eraser() {
-    canvas?.value.erase()
+    canvas?.value.setDrawingTool("erase")
 }
 // 清空画布
 function clear() {

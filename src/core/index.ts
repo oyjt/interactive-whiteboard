@@ -17,8 +17,6 @@ import {
   Circle,
   Ellipse,
   Line,
-  Path,
-  Point,
 } from "fabric/fabric-impl";
 import EventEmitter from "@/utils/emitter";
 import Arrow from "./objects/Arrow";
@@ -76,8 +74,22 @@ export enum ShapeType {
   ELLIPSE = "ellipse",
   LINE = "line",
   ARROW = "arrow",
-  FREE_DRAW = 'free_draw',
+  FREE_DRAW = "free_draw",
 }
+
+// 定义绘图工具类型
+type DrawingTool =
+  | "rectangle"
+  | "triangle"
+  | "circle"
+  | "ellipse"
+  | "line"
+  | "arrow"
+  | "text"
+  | "pencil"
+  | "select"
+  | "erase"
+  | "";
 
 interface ShapeOptions {
   stroke?: string;
@@ -86,35 +98,29 @@ interface ShapeOptions {
   opacity?: number;
 }
 
-interface MousePosition {
-  x: number;
-  y: number;
-}
-
-class FabricWrapper extends EventEmitter<FabricEvents> {
+class FabricCanvas extends EventEmitter<FabricEvents> {
   private canvas: ICanvas;
-  // private isDrawing = false;
-  private isMouseDown = false;
   private undoStack: IObject[] = [];
   private redoStack: IObject[] = [];
   private currentShape: IObject | null = null;
-  private startPosition: MousePosition = { x: 0, y: 0 };
-  private endPosition: MousePosition = { x: 0, y: 0 };
-  private shapeType: ShapeType = ShapeType.LINE;
+  private drawingTool: DrawingTool = "";
+  private isDrawing = false;
+  private startX = 0;
+  private startY = 0;
   private options: ShapeOptions = {
     stroke: "#ff0000",
     strokeWidth: 2,
     fill: "transparent",
     opacity: 1,
   };
-  private startX: number = 0;
-  private startY: number = 0;
 
   constructor(canvasId: string) {
     super();
 
-    this.canvas = new fabric.Canvas(canvasId);
-    this.canvas.selection = false;
+    this.canvas = new fabric.Canvas(canvasId, {
+      isDrawingMode: true,
+      selection: false,
+    });
     this.initEvent();
   }
 
@@ -168,334 +174,88 @@ class FabricWrapper extends EventEmitter<FabricEvents> {
     this.canvas.setActiveObject(object);
   }
 
-  private onMouseDownLine(event: IEvent) {
-    this.isMouseDown = true;
-    const pointer = this.canvas.getPointer(event.e);
-    const options: ILineOptions = {
-      x1: pointer.x,
-      y1: pointer.y,
-      x2: pointer.x,
-      y2: pointer.y,
-      stroke: 'black',
-      strokeWidth: 2,
-    };
-    this.currentShape = new fabric.Line(options);
-    this.currentShape&&this.canvas.add(this.currentShape);
-  }
-
-  private onMouseMoveLine(event: IEvent) {
-    if (!this.isMouseDown) {
-      return;
-    }
-
-    if(this.currentShape) {
-      const pointer = this.canvas.getPointer(event.e);
-      (this.currentShape as Line).set('x2', pointer.x);
-      (this.currentShape as Line).set('y2', pointer.y);
-      this.canvas.renderAll();
-    }
-  }
-
-  private onMouseUpLine() {
-    this.isMouseDown = false;
-    this.currentShape = null;
-  }
-
-
-  private onMouseDownEllipse(event: IEvent) {
-    this.isMouseDown = true;
-    const pointer = this.canvas.getPointer(event.e);
-    const options: IEllipseOptions = {
-      left: pointer.x,
-      top: pointer.y,
-      rx: 0,
-      ry: 0,
-      fill: 'transparent',
-      stroke: 'black',
-      strokeWidth: 2,
-    };
-    this.currentShape = new fabric.Ellipse(options);
-    this.currentShape&&this.canvas.add(this.currentShape);
-  }
-
-  private onMouseMoveEllipse(event: IEvent) {
-    if (!this.isMouseDown) {
-      return;
-    }
-
-    if(this.currentShape&&this.currentShape.left&&this.currentShape.top) {
-      const pointer = this.canvas.getPointer(event.e);
-      const rx = Math.abs(pointer.x - this.currentShape.left);
-      const ry = Math.abs(pointer.y - this.currentShape.top);
-      (this.currentShape as Ellipse).set('rx', rx);
-      (this.currentShape as Ellipse).set('ry', ry);
-      this.canvas.renderAll();
-    }
-  }
-
-  private onMouseUpEllipse() {
-    this.isMouseDown = false;
-    this.currentShape = null;
-  }
-
-  private onMouseDownCircle(event: IEvent) {
-    this.isMouseDown = true;
-    const pointer = this.canvas.getPointer(event.e);
-    const options: ICircleOptions = {
-      left: pointer.x,
-      top: pointer.y,
-      radius: 0,
-      fill: 'transparent',
-      stroke: 'black',
-      strokeWidth: 2,
-    };
-    this.currentShape = new fabric.Circle(options);
-    this.currentShape&&this.canvas.add(this.currentShape);
-  }
-
-  private onMouseMoveCircle(event: IEvent) {
-    if (!this.isMouseDown) {
-      return;
-    }
-
-    if(this.currentShape&&this.currentShape.left) {
-      const pointer = this.canvas.getPointer(event.e);
-      const radius = Math.abs(pointer.x - this.currentShape.left);
-      (this.currentShape as Circle).set('radius', radius);
-      this.canvas.renderAll();
-    }
-  }
-
-  private onMouseUpCircle() {
-    this.isMouseDown = false;
-    this.currentShape = null;
-  }
-
-  private onMouseDownTriangle(event: IEvent) {
-    this.isMouseDown = true;
-    const pointer = this.canvas.getPointer(event.e);
-    const options: ITriangleOptions = {
-      left: pointer.x,
-      top: pointer.y,
-      width: 0,
-      height: 0,
-      fill: 'transparent',
-      stroke: 'black',
-      strokeWidth: 2,
-    };
-    this.currentShape = new fabric.Triangle(options);
-    this.currentShape&&this.canvas.add(this.currentShape);
-  }
-
-  private onMouseMoveTriangle(event: IEvent) {
-    if (!this.isMouseDown) {
-      return;
-    }
-
-    if(this.currentShape&&this.currentShape.left&&this.currentShape.top) {
-      const pointer = this.canvas.getPointer(event.e);
-      const width = pointer.x - this.currentShape.left;
-      const height = pointer.y - this.currentShape.top;
-      (this.currentShape as Triangle).set('width', width);
-      (this.currentShape as Triangle).set('height', height);
-      this.canvas.renderAll();
-    }
-  }
-
-  private onMouseUpTriangle() {
-    this.isMouseDown = false;
-    this.currentShape = null;
-  }
-
-  private onMouseDownRectangle(event: IEvent) {
-    this.isMouseDown = true;
-    const pointer = this.canvas.getPointer(event.e);
-    this.startX = pointer.x;
-    this.startY = pointer.y;
-  }
-
-  private onMouseMoveRectangle(event: IEvent) {
-    if (!this.isMouseDown) {
-      return;
-    }
-
-    const pointer = this.canvas.getPointer(event.e);
-
-    if (this.currentShape) {
-      this.currentShape.set('width', pointer.x - this.startX);
-      this.currentShape.set('height', pointer.y - this.startY);
-      this.canvas.renderAll();
-    } else {
-      const options: IRectOptions = {
-        left: this.startX,
-        top: this.startY,
-        width: pointer.x - this.startX,
-        height: pointer.y - this.startY,
-        fill: 'transparent',
-        stroke: 'black',
-        strokeWidth: 2,
-      };
-      this.currentShape = new fabric.Rect(options);
-      this.currentShape&&this.canvas.add(this.currentShape);
-    }
-  }
-
-  private onMouseUpRectangle() {
-    this.isMouseDown = false;
-    this.currentShape = null;
-  }
-
-  public setMode(mode: string) {
-    this.canvas.off('mouse:down');
-    this.canvas.off('mouse:move');
-    this.canvas.off('mouse:up');
+  // 设置绘图工具
+  public setDrawingTool(tool: DrawingTool) {
+    // this.canvas.off('mouse:down');
+    // this.canvas.off('mouse:move');
+    // this.canvas.off('mouse:up');
     this.canvas.isDrawingMode = false;
-  
-    switch (mode) {
-      case 'rectangle':
-        this.canvas.on('mouse:down', this.onMouseDownRectangle.bind(this));
-        this.canvas.on('mouse:move', this.onMouseMoveRectangle.bind(this));
-        this.canvas.on('mouse:up', this.onMouseUpRectangle.bind(this));
-        break;
-      case 'triangle':
-        this.canvas.on('mouse:down', this.onMouseDownTriangle.bind(this));
-        this.canvas.on('mouse:move', this.onMouseMoveTriangle.bind(this));
-        this.canvas.on('mouse:up', this.onMouseUpTriangle.bind(this));
-        break;
-      case 'circle':
-        this.canvas.on('mouse:down', this.onMouseDownCircle.bind(this));
-        this.canvas.on('mouse:move', this.onMouseMoveCircle.bind(this));
-        this.canvas.on('mouse:up', this.onMouseUpCircle.bind(this));
-        break;
-      case 'ellipse':
-        this.canvas.on('mouse:down', this.onMouseDownEllipse.bind(this));
-        this.canvas.on('mouse:move', this.onMouseMoveEllipse.bind(this));
-        this.canvas.on('mouse:up', this.onMouseUpEllipse.bind(this));
-        break;
-      case 'line':
-        this.canvas.on('mouse:down', this.onMouseDownLine.bind(this));
-        this.canvas.on('mouse:move', this.onMouseMoveLine.bind(this));
-        this.canvas.on('mouse:up', this.onMouseUpLine.bind(this));
-        break;
-      case 'free-draw':
-        this.drawFreeDraw();
-        break;
-      default:
-        break;
+    this.canvas.selection = false;
+    this.drawingTool = tool;
+    if (tool === "pencil") {
+      this.drawFreeDraw();
+    } else if (tool === "erase") {
+      this.erase();
+    } else if (tool === "select") {
+      this.canvas.selection = true;
     }
   }
 
-  public setShapeType = (type: ShapeType) => {
-    this.shapeType = type;
-  };
+  // public setShapeType = (type: ShapeType) => {
+  //   this.shapeType = type;
+  // };
 
   public setOptions = (options: ShapeOptions) => {
     this.options = { ...this.options, ...options };
   };
 
-  private createShape = (type: ShapeType, options: ShapeOptions) => {
-    switch (type) {
-      case ShapeType.RECTANGLE:
-        return this.drawRect({
-          ...options,
-          width: this.endPosition.x - this.startPosition.x,
-          height: this.endPosition.y - this.startPosition.y,
-          left: this.startPosition.x,
-          top: this.startPosition.y,
-        });
-      case ShapeType.TRIANGLE:
-        return this.drawTriangle({
-          ...options,
-          left: this.startPosition.x,
-          top: this.startPosition.y,
-          width: this.endPosition.x - this.startPosition.x,
-          height: this.endPosition.y - this.startPosition.y,
-        });
-      case ShapeType.CIRCLE:
-        const radius = Math.sqrt(
-          Math.pow(this.endPosition.x - this.startPosition.x, 2) +
-            Math.pow(this.endPosition.y - this.startPosition.y, 2)
-        );
-        return this.drawCircle({
-          ...options,
-          radius,
-          left: this.startPosition.x,
-          top: this.startPosition.y,
-        });
-      case ShapeType.LINE:
-        return this.drawLine(this.startPosition.x, this.startPosition.y, this.endPosition.x, this.endPosition.y, {
-          ...options,
-        });
-      case ShapeType.ARROW:
-        return this.drawArrow(this.startPosition.x, this.startPosition.y, this.endPosition.x, this.endPosition.y, {
-          ...options,
-        });
-      case ShapeType.FREE_DRAW:
-        return this.drawFreeDraw()
-      default:
-        return null;
-    }
-  };
-
   // 绘制矩形
-  public drawRect(options: IRectOptions): Rect {
-    const rect = new fabric.Rect(options);
-    return rect
-    // this.canvas.add(rect);
+  public drawRect(options: IRectOptions): void {
+    const rect = new fabric.Rect({ ...this.options, ...options });
+    this.canvas.add(rect);
+    this.currentShape = rect;
     // this.setActiveObject(rect);
   }
 
   // 绘制三角形
-  public drawTriangle(options: ITriangleOptions): Triangle {
-    const triangle = new fabric.Triangle(options);
-    return triangle
-    // this.canvas.add(triangle);
+  public drawTriangle(options: ITriangleOptions): void {
+    const triangle = new fabric.Triangle({ ...this.options, ...options });
+    this.canvas.add(triangle);
+    this.currentShape = triangle;
     // this.setActiveObject(triangle);
   }
 
   // 绘制圆形
-  public drawCircle(options: ICircleOptions): Circle {
-    const circle = new fabric.Circle(options);
-    return circle
-    // this.canvas.add(circle);
+  public drawCircle(options: ICircleOptions): void {
+    const circle = new fabric.Circle({ ...this.options, ...options });
+    this.canvas.add(circle);
     // this.setActiveObject(circle);
   }
 
   // 绘制椭圆
-  public drawEllipse(options: IEllipseOptions): Ellipse {
-    const ellipse = new fabric.Ellipse(options);
-    return ellipse
-    // this.canvas.add(ellipse);
+  public drawEllipse(options: IEllipseOptions): void {
+    const ellipse = new fabric.Ellipse({ ...this.options, ...options });
+    this.canvas.add(ellipse);
     // this.setActiveObject(ellipse);
   }
 
   // 绘制线条
-  public drawLine(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): Line {
-    const line = new fabric.Line([x1, y1, x2, y2], options);
-    return line
-    // this.canvas.add(line);
+  public drawLine(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): void {
+    const line = new fabric.Line([x1, y1, x2, y2], { ...this.options, ...options });
+    this.canvas.add(line);
     // this.setActiveObject(line);
   }
 
   // 绘制箭头
-  public drawArrow(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): Arrow {
-    const arrow = new Arrow([x1, y1, x2, y2], options);
-    return arrow
-    // this.canvas.add(arrow);
+  public drawArrow(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): void {
+    const arrow = new Arrow([x1, y1, x2, y2], { ...this.options, ...options });
+    this.canvas.add(arrow);
     // this.setActiveObject(arrow);
   }
 
   // 自由绘制
   public drawFreeDraw(options?: any) {
-    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, options);
+    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, ...options });
     this.canvas.isDrawingMode = true;
-  };
+  }
 
   // 绘制文本
   public drawText(text: string, options?: ITextOptions): void {
-    const textObj = new fabric.Text(text, options);
-    // return textObj
+    const textObj = new fabric.IText(text, {fontSize: 14, fill:'black', ...this.options, ...options });
     this.canvas.add(textObj);
+    // this.setActiveObject(textObj)
+    textObj.enterEditing();
+    textObj.selectAll();
   }
 
   // 插入图片
@@ -558,35 +318,10 @@ class FabricWrapper extends EventEmitter<FabricEvents> {
       this.emit("after:render", e);
     });
 
-    // this.canvas.on("mouse:down", (event) => {
-    //   this.isDrawing = true;
-    //   this.startPosition = this.canvas.getPointer(event.e);
-    //   this.currentShape = this.createShape(this.shapeType, this.options);
-    //   if (this.currentShape) {
-    //     this.canvas.add(this.currentShape);
-    //   }
-
-    //   this.emit("mouse:down", event);
-    // });
-
-    // this.canvas.on("mouse:move", (event) => {
-    //   if (!this.isDrawing) return;
-    //   if (this.currentShape) {
-    //     this.endPosition = this.canvas.getPointer(event.e);
-    //     this.currentShape.setCoords();
-    //     this.currentShape.set(this.createShape(this.shapeType, this.options));
-    //     this.canvas.renderAll();
-    //   }
-    //   this.emit("mouse:move", event);
-    // });
-
-    // this.canvas.on("mouse:up", (event) => {
-    //   this.isDrawing = false;
-    //   this.currentShape = null;
-    //   this.startPosition = { x: 0, y: 0 };
-    //   this.endPosition = { x: 0, y: 0 };
-    //   this.emit("mouse:up", event);
-    // });
+    // 监听鼠标事件
+    this.canvas.on("mouse:down", this.onMouseDown.bind(this));
+    this.canvas.on("mouse:move", this.onMouseMove.bind(this));
+    this.canvas.on("mouse:up", this.onMouseUp.bind(this));
 
     // 绑定按键事件，实现撤销和重做
     document.addEventListener("keydown", (event) => {
@@ -596,6 +331,125 @@ class FabricWrapper extends EventEmitter<FabricEvents> {
         this.redo();
       }
     });
+  }
+
+  // 鼠标按下事件处理函数
+  private onMouseDown(event: IEvent) {
+    if (!event.pointer) return;
+    this.isDrawing = true;
+    const { x, y } = event.pointer;
+    this.startX = x;
+    this.startY = y;
+
+    switch (this.drawingTool) {
+      case "rectangle":
+        this.drawRect({
+          left: x,
+          top: y,
+          width: 0,
+          height: 0,
+        });
+        break;
+      case "triangle":
+        this.drawTriangle({
+          left: x,
+          top: y,
+          width: 0,
+          height: 0,
+        });
+        break;
+      case "circle":
+        this.drawCircle({
+          left: x,
+          top: y,
+          radius: 0,
+        });
+        break;
+      case "ellipse":
+        this.drawEllipse({
+          left: x,
+          top: y,
+          rx: 0,
+          ry: 0,
+        });
+        break;
+      case "line":
+        this.drawLine(x, y, x, y);
+        break;
+      case "arrow":
+        this.drawArrow(x, y, x, y);
+        break;
+      case "text":
+        this.drawText('Hello World !', {left: x, top: y})
+        break;
+      default:
+        break;
+    }
+  }
+
+  // 鼠标移动事件处理函数
+  private onMouseMove(event: IEvent) {
+    if (!this.isDrawing || !event.pointer) {
+      return;
+    }
+
+    const { x, y } = event.pointer;
+    const width = x - this.startX;
+    const height = y - this.startY;
+
+    switch (this.drawingTool) {
+      case "rectangle":
+        if (this.currentShape) {
+          this.currentShape.set({
+            width,
+            height,
+          });
+        }
+        break;
+      case "triangle":
+        if (this.currentShape) {
+          this.currentShape.set({
+            width,
+            height,
+          });
+        }
+        break;
+      case "circle":
+        if (this.currentShape) {
+          const radius = Math.sqrt(width * width + height * height) / 2;
+          console.log("半径", radius);
+          (this.currentShape as Circle).set({
+            radius,
+          });
+        }
+        break;
+      case "ellipse":
+        if (this.currentShape) {
+          (this.currentShape as Ellipse).set({
+            rx: Math.abs(width / 2),
+            ry: Math.abs(height / 2),
+          });
+        }
+        break;
+      case "line":
+        if (this.currentShape) {
+          (this.currentShape as Line).set({
+            x2: x,
+            y2: y,
+          });
+        }
+        break;
+      default:
+        break;
+    }
+
+    this.canvas.renderAll();
+  }
+
+  // 鼠标抬起事件处理函数
+  private onMouseUp() {
+    this.isDrawing = false;
+    this.currentShape = null;
   }
 
   public toDataURL(options?: ICanvasOptions) {
@@ -626,14 +480,20 @@ class FabricWrapper extends EventEmitter<FabricEvents> {
     }
   }
 
+  /**
+   * 缩放
+   * @param ratio 缩放比例（0~1）
+   */
   public zoom(ratio: number) {
     this.canvas.setZoom(ratio);
   }
 
+  // 放大
   public zoomIn() {
     this.canvas.setZoom(this.canvas.getZoom() * 1.1);
   }
 
+  // 缩小
   public zoomOut() {
     this.canvas.setZoom(this.canvas.getZoom() / 1.1);
   }
@@ -646,4 +506,4 @@ class FabricWrapper extends EventEmitter<FabricEvents> {
   }
 }
 
-export default FabricWrapper;
+export default FabricCanvas;
