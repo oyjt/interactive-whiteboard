@@ -420,7 +420,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         break;
       case "circle":
           const radius = Math.sqrt(width * width + height * height) / 2;
-          console.log('圆角',radius);
           (this.currentShape as Circle).set({
             radius,
           });
