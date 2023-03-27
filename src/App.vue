@@ -18,8 +18,8 @@
               </div>
           </div>
       </div>
-      <div class="preview-controller-box" v-if="isPreviewShow">
-        <PreviewController></PreviewController>
+      <div class="preview-controller-box" v-show="isPreviewShow">
+        <PreviewController @handlePreviewState="handlePreviewState"></PreviewController>
       </div>
       <canvas id="canvas" width="800" height="450"></canvas>
     </div>
@@ -67,7 +67,7 @@ function init() {
 }
 
 function handlePreviewState(state: boolean) {
-
+  isPreviewShow.value = state;
 }
 
 onMounted(() => {
@@ -150,5 +150,7 @@ onMounted(() => {
   right: 0;
   width: 240px;
   height: 100%;
+  z-index: 3;
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
 }
 </style>

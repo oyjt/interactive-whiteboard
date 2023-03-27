@@ -46,9 +46,9 @@ import deleteIcon from "./image/delete.svg";
 const scenes = ref<Array<string>>(['http://47.92.172.237/ppt.png',
     'http://47.92.172.237/ppt1.png', 'http://47.92.172.237/ppt2.png', 'http://47.92.172.237/ppt3.png']);
 
-
+const emit = defineEmits(['handlePreviewState'])
 function handlePreviewState(state: boolean) {
-
+    emit('handlePreviewState', state)
 }
 
 function setScenePath(index: number) {
