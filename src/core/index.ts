@@ -17,6 +17,7 @@ import {
   Circle,
   Ellipse,
   Line,
+  IText,
 } from "fabric/fabric-impl";
 import EventEmitter from "@/utils/emitter";
 import Arrow from "./objects/Arrow";
@@ -120,6 +121,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas = new fabric.Canvas(canvasId, {
       isDrawingMode: true,
       selection: false,
+      includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
     this.initEvent();
   }
@@ -219,6 +221,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public drawCircle(options: ICircleOptions): void {
     const circle = new fabric.Circle({ ...this.options, ...options });
     this.canvas.add(circle);
+    this.currentShape = circle;
     // this.setActiveObject(circle);
   }
 
@@ -226,6 +229,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public drawEllipse(options: IEllipseOptions): void {
     const ellipse = new fabric.Ellipse({ ...this.options, ...options });
     this.canvas.add(ellipse);
+    this.currentShape = ellipse;
     // this.setActiveObject(ellipse);
   }
 
@@ -233,6 +237,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public drawLine(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): void {
     const line = new fabric.Line([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(line);
+    this.currentShape = line;
     // this.setActiveObject(line);
   }
 
@@ -240,6 +245,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public drawArrow(x1: number, y1: number, x2: number, y2: number, options?: ILineOptions): void {
     const arrow = new Arrow([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(arrow);
+    this.currentShape = arrow;
     // this.setActiveObject(arrow);
   }
 
@@ -251,11 +257,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 绘制文本
   public drawText(text: string, options?: ITextOptions): void {
-    const textObj = new fabric.IText(text, {fontSize: 14, fill:'black', ...this.options, ...options });
+    const textObj = new fabric.IText(text, {fontSize: 14, fill:'#ff0000', ...options });
     this.canvas.add(textObj);
-    // this.setActiveObject(textObj)
+    this.currentShape = textObj;
+    // 文本打开编辑模式
     textObj.enterEditing();
-    textObj.selectAll();
+    // 文本编辑框获取焦点
+    textObj.hiddenTextarea.focus()
   }
 
   // 插入图片
@@ -380,7 +388,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         this.drawArrow(x, y, x, y);
         break;
       case "text":
-        this.drawText('Hello World !', {left: x, top: y})
+        this.drawText('', {left: x, top: y})
         break;
       default:
         break;
@@ -389,7 +397,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 鼠标移动事件处理函数
   private onMouseMove(event: IEvent) {
-    if (!this.isDrawing || !event.pointer) {
+    if (!this.isDrawing || !event.pointer || !this.currentShape) {
       return;
     }
 
@@ -399,45 +407,41 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
     switch (this.drawingTool) {
       case "rectangle":
-        if (this.currentShape) {
-          this.currentShape.set({
-            width,
-            height,
-          });
-        }
+        this.currentShape.set({
+          width,
+          height,
+        });
         break;
       case "triangle":
-        if (this.currentShape) {
           this.currentShape.set({
             width,
             height,
           });
-        }
         break;
       case "circle":
-        if (this.currentShape) {
           const radius = Math.sqrt(width * width + height * height) / 2;
-          console.log("半径", radius);
+          console.log('圆角',radius);
           (this.currentShape as Circle).set({
             radius,
           });
-        }
         break;
       case "ellipse":
-        if (this.currentShape) {
           (this.currentShape as Ellipse).set({
             rx: Math.abs(width / 2),
             ry: Math.abs(height / 2),
           });
-        }
         break;
       case "line":
-        if (this.currentShape) {
           (this.currentShape as Line).set({
             x2: x,
             y2: y,
           });
-        }
+        break;
+      case "arrow":
+          (this.currentShape as Arrow).set({
+            x2: x,
+            y2: y,
+          });
         break;
       default:
         break;
@@ -449,6 +453,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 鼠标抬起事件处理函数
   private onMouseUp() {
     this.isDrawing = false;
+    if (this.currentShape) {
+      const text = this.currentShape as IText;
+      if (text.text) {
+        this.removeObject(text);
+      } else {
+        // text.enterEditing();
+      }
+    }
     this.currentShape = null;
   }
 
