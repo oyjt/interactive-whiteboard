@@ -21,6 +21,9 @@ import {
 } from "fabric/fabric-impl";
 import EventEmitter from "@/utils/emitter";
 import Arrow from "./objects/Arrow";
+import initHotKeys from "./initHotKeys";
+import initControls from "./initControls";
+import initControlsRotate from "./initControlsRotate";
 /**
  * fabri方法封装
  * 使用示例：
@@ -68,18 +71,8 @@ interface FabricEvents {
   [key: string | symbol]: IEvent | undefined;
 }
 
-export enum ShapeType {
-  RECTANGLE = "rectangle",
-  TRIANGLE = "triangle",
-  CIRCLE = "circle",
-  ELLIPSE = "ellipse",
-  LINE = "line",
-  ARROW = "arrow",
-  FREE_DRAW = "free_draw",
-}
-
 // 定义绘图工具类型
-type DrawingTool =
+export type DrawingTool =
   | "rectangle"
   | "triangle"
   | "circle"
@@ -89,7 +82,8 @@ type DrawingTool =
   | "text"
   | "pencil"
   | "select"
-  | "erase"
+  | "eraser"
+  | "clear"
   | "";
 
 interface ShapeOptions {
@@ -123,6 +117,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
+    initHotKeys(this.canvas);
+    // initControls(this.canvas);
+    // initControlsRotate(this.canvas);
     this.initEvent();
   }
 
@@ -186,16 +183,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.drawingTool = tool;
     if (tool === "pencil") {
       this.drawFreeDraw();
-    } else if (tool === "erase") {
-      this.erase();
+    } else if (tool === "eraser") {
+      this.eraser();
     } else if (tool === "select") {
       this.canvas.selection = true;
+    } else if(tool === "clear") {
+      this.clearCanvas()
     }
   }
-
-  // public setShapeType = (type: ShapeType) => {
-  //   this.shapeType = type;
-  // };
 
   public setOptions = (options: ShapeOptions) => {
     this.options = { ...this.options, ...options };
@@ -251,7 +246,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 自由绘制
   public drawFreeDraw(options?: any) {
-    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, ...options });
+    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, color: "#ff0000", width: 5, ...options });
     this.canvas.isDrawingMode = true;
   }
 
@@ -275,8 +270,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   // 橡皮擦(IEraserBrushOptions)
-  public erase(options?: any): void {
-    this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, options);
+  public eraser(options?: any): void {
+    this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, { width: 10, ...options});
     this.canvas.isDrawingMode = true;
   }
 
@@ -511,9 +506,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 销毁事件监听
   public destroy() {
-    this.canvas.removeListeners();
     document.removeEventListener("keydown", this.undo);
     this.removeAllListeners();
+    // 销毁画布
+    // this.canvas.removeListeners();
+    this.canvas.dispose();
   }
 }
 

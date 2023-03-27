@@ -1,10 +1,24 @@
 <template>
   <div>
-    <Tools></Tools>
     <div class="canvas-wrap">
+      <div className="tool-box-out">
+        <ToolBox></ToolBox>
+      </div>
+      <div className="redo-undo-box">
+          <RedoUndo></RedoUndo>
+      </div>
+      <div className="zoom-controller-box">
+        <ZoomController></ZoomController>
+      </div>
+      <div className="page-controller-box">
+          <div className="page-controller-mid-box">
+              <PageController></PageController>
+              <div className="page-preview-cell" @click="handlePreviewState(true)">
+                  <img :src="pages" alt="PPT预览"/>
+              </div>
+          </div>
+      </div>
       <canvas id="canvas" width="800" height="450"></canvas>
-      <Control></Control>
-      <Zoom></Zoom>
     </div>
     <div class="canvas-wrap">
       <canvas id="canvas2" width="800" height="450"></canvas>
@@ -15,11 +29,13 @@
 <script setup lang="ts">
 import {onMounted, provide, ref} from 'vue'
 import { fabric } from 'fabric';
-import FabricCanvas from './core'
-import Tools from './components/Tools.vue'
-import Zoom from './components/Zoom.vue'
-import Control from './components/Control.vue'
 import { Canvas as ICanvas } from 'fabric/fabric-impl'
+import FabricCanvas from './core'
+import ToolBox from './components/ToolBox/index.vue'
+import RedoUndo from './components/RedoUndo/index.vue'
+import ZoomController from './components/ZoomController/index.vue'
+import PageController from './components/PageController/index.vue'
+import pages from './assets/images/pages.svg'
 
 const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
@@ -44,6 +60,10 @@ function init() {
   })
 }
 
+function handlePreviewState(state: boolean) {
+
+}
+
 onMounted(() => {
   init()
 })
@@ -56,5 +76,65 @@ onMounted(() => {
   height: 450px;
   margin: 0 auto;
   border: 1px solid #ccc;
+}
+
+.tool-box-out {
+  height: 100%;
+  width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: absolute;
+  z-index: 3;
+  left: 8px;
+}
+
+.redo-undo-box {
+  position: absolute;
+  z-index: 3;
+  bottom: 8px;
+  left: 8px;
+}
+
+.zoom-controller-box {
+  position: absolute;
+  left: 76px;
+  z-index: 3;
+  bottom: 8px;
+}
+
+.page-controller-box {
+  position: absolute;
+  z-index: 3;
+  bottom: 8px;
+  right: 8px;
+}
+
+.page-controller-mid-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  height: 32px;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 4px;
+  user-select: none;
+  font-size: 12px;
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.page-preview-cell {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  background-color: white;
+  border-radius: 2px;
+  &:hover {
+    background: rgba(33, 35, 36, 0.1);
+  }
 }
 </style>
