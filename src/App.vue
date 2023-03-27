@@ -1,22 +1,25 @@
 <template>
   <div>
     <div class="canvas-wrap">
-      <div className="tool-box-out">
+      <div class="tool-box-out">
         <ToolBox></ToolBox>
       </div>
-      <div className="redo-undo-box">
+      <div class="redo-undo-box">
           <RedoUndo></RedoUndo>
       </div>
-      <div className="zoom-controller-box">
+      <div class="zoom-controller-box">
         <ZoomController></ZoomController>
       </div>
-      <div className="page-controller-box">
+      <div class="page-controller-box">
           <div className="page-controller-mid-box">
               <PageController></PageController>
               <div className="page-preview-cell" @click="handlePreviewState(true)">
                   <img :src="pages" alt="PPT预览"/>
               </div>
           </div>
+      </div>
+      <div class="preview-controller-box" v-if="isPreviewShow">
+        <PreviewController></PreviewController>
       </div>
       <canvas id="canvas" width="800" height="450"></canvas>
     </div>
@@ -35,12 +38,15 @@ import ToolBox from './components/ToolBox/index.vue'
 import RedoUndo from './components/RedoUndo/index.vue'
 import ZoomController from './components/ZoomController/index.vue'
 import PageController from './components/PageController/index.vue'
+import PreviewController from './components/PreviewController/index.vue'
 import pages from './assets/images/pages.svg'
 
 const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
 let canvas1: FabricCanvas;
 let canvas2: ICanvas;
+
+const isPreviewShow = ref<boolean>(false)
 
 function init() {
   // 初始化画布
@@ -136,5 +142,13 @@ onMounted(() => {
   &:hover {
     background: rgba(33, 35, 36, 0.1);
   }
+}
+
+.preview-controller-box {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 100%;
 }
 </style>
