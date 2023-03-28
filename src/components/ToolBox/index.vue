@@ -6,6 +6,12 @@
                 <img :src="item.shapeType === currentShapType ? item.iconActive : item.icon" :alt="item.name"/>
             </div>
         </div>
+        <div class="tool-box-cell-box-left">
+            <div class="tool-box-cell"
+                    @click="clickClear">
+                <img :src="clear" alt="清屏"/>
+            </div>
+        </div>
     </div>
 </template>
 <script setup lang="ts">
@@ -30,7 +36,6 @@ import straightActive from "./image/straight-active.svg";
 import triangle from "./image/triangle.svg";
 import triangleActive from "./image/triangle-active.svg";
 import clear from "./image/clear.svg";
-import clearActive from "./image/clear-active.svg";
 
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 
@@ -85,11 +90,6 @@ const tools = ref<Appliance[]>([{
     icon: arrow,
     iconActive: arrowActive,
     shapeType: "arrow",
-},{
-    name: '清屏',
-    icon: clear,
-    iconActive: clearActive,
-    shapeType: "clear",
 }])
 
 const currentShapType = ref<string>("pencil")
@@ -97,6 +97,10 @@ const currentShapType = ref<string>("pencil")
 function clickAppliance(type: DrawingTool) {
     currentShapType.value = type;
     canvas?.value.setDrawingTool(type)
+}
+
+function clickClear() {
+  canvas?.value.clearCanvas()
 }
 </script>
 <style lang="scss" scoped>

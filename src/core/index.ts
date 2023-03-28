@@ -12,8 +12,6 @@ import {
   IEvent,
   ICanvasOptions,
   ITriangleOptions,
-  Triangle,
-  Rect,
   Circle,
   Ellipse,
   Line,
@@ -83,7 +81,6 @@ export type DrawingTool =
   | "pencil"
   | "select"
   | "eraser"
-  | "clear"
   | "";
 
 interface ShapeOptions {
@@ -117,8 +114,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
-    this.canvas.freeDrawingBrush.color = '#ff0000'
-    this.canvas.freeDrawingBrush.width = 5
+    this.setDrawingTool("pencil")
     
     initHotKeys(this.canvas);
     initControls(this.canvas);
@@ -176,6 +172,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.setActiveObject(object);
   }
 
+  public setWidth(value: number | string): void {
+    this.canvas.setWidth(value)
+  }
+  
+  public setHeight(value: number | string): void {
+    this.canvas.setHeight(value)
+  }
+
   // 设置绘图工具
   public setDrawingTool(tool: DrawingTool) {
     // this.canvas.off('mouse:down');
@@ -190,8 +194,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       this.eraser();
     } else if (tool === "select") {
       this.canvas.selection = true;
-    } else if(tool === "clear") {
-      this.clearCanvas()
     }
   }
 
@@ -249,13 +251,16 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 自由绘制
   public drawFreeDraw(options?: any) {
-    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, ...options });
+    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, options);
+    this.canvas.freeDrawingBrush.color = '#ff0000'
+    this.canvas.freeDrawingBrush.width = 5
+    this.canvas.freeDrawingCursor = 'auto'
     this.canvas.isDrawingMode = true;
   }
 
   // 绘制文本
   public drawText(text: string, options?: ITextOptions): void {
-    const textObj = new fabric.IText(text, {fontSize: 14, fill:'#ff0000', ...options });
+    const textObj = new fabric.IText(text, {fontSize: 18, fill:'#ff0000', ...options });
     this.canvas.add(textObj);
     this.currentShape = textObj;
     // 文本打开编辑模式
@@ -274,7 +279,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 橡皮擦(IEraserBrushOptions)
   public eraser(options?: any): void {
-    this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, { width: 10, ...options});
+    this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, options);
+    this.canvas.freeDrawingBrush.width = 10
+    this.canvas.freeDrawingCursor = 'auto'
     this.canvas.isDrawingMode = true;
   }
 
@@ -490,21 +497,28 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   /**
-   * 缩放
+   * 缩放（以画布中心点放大）
    * @param ratio 缩放比例（0~1）
    */
-  public zoom(ratio: number) {
-    this.canvas.setZoom(ratio);
+  public zoom(ratio: number = 1) {
+    // 计算缩放中心
+    const point = new fabric.Point((this.canvas.width as number) / 2, (this.canvas.height as number) / 2);
+    this.canvas.zoomToPoint(point, ratio);
   }
 
-  // 放大
+  // 获取缩放比率
+  public getZoom(): number {
+    return this.canvas.getZoom();
+  }
+
+  // 放大（以画布中心点放大）
   public zoomIn() {
-    this.canvas.setZoom(this.canvas.getZoom() * 1.1);
+    this.zoom(this.canvas.getZoom() * 1.1);
   }
 
-  // 缩小
+  // 缩小（以画布中心点缩小）
   public zoomOut() {
-    this.canvas.setZoom(this.canvas.getZoom() / 1.1);
+    this.zoom(this.canvas.getZoom() / 1.1);
   }
 
   // 销毁事件监听
