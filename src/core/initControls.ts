@@ -3,10 +3,10 @@
  */
 
 import { fabric } from 'fabric';
-import verticalImg from '@/assets/editor/middlecontrol.svg';
-import horizontalImg from '@/assets/editor/middlecontrolhoz.svg';
-import edgeImg from '@/assets/editor/edgecontrol.svg';
-import rotateImg from '@/assets/editor/rotateicon.svg';
+import verticalImg from '../assets/editor/middlecontrol.svg';
+import horizontalImg from '../assets/editor/middlecontrolhoz.svg';
+import edgeImg from '../assets/editor/edgecontrol.svg';
+import rotateImg from '../assets/editor/rotateicon.svg';
 import { Canvas, Object } from 'fabric/fabric-impl';
 
 // 中间横杠

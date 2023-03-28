@@ -73,27 +73,27 @@ function initControlsRotate(canvas: Canvas) {
   });
 
   // 旋转时，实时更新旋转控制图标
-  // canvas.on('object:rotating', (event) => {
-  //   const activeObject = canvas.getActiveObject();
-  //   if (!activeObject) return;
-  //   const body = canvas.lowerCanvasEl.nextSibling;
-  //   switch (event.transform?.corner) {
-  //     case 'mtr':
-  //       body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)));
-  //       break;
-  //     case 'mtr2':
-  //       body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 90);
-  //       break;
-  //     case 'mtr3':
-  //       body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 180);
-  //       break;
-  //     case 'mtr4':
-  //       body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 270);
-  //       break;
-  //     default:
-  //       break;
-  //   } // 设置四角旋转光标
-  // });
+  canvas.on('object:rotating', (event) => {
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+    const body = canvas.getElement().nextSibling as HTMLCanvasElement;
+    switch (event.transform?.corner) {
+      case 'mtr':
+        body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)));
+        break;
+      case 'mtr2':
+        body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 90);
+        break;
+      case 'mtr3':
+        body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 180);
+        break;
+      case 'mtr4':
+        body.style.cursor = rotateIcon(Number((activeObject.angle as number).toFixed(2)) + 270);
+        break;
+      default:
+        break;
+    } // 设置四角旋转光标
+  });
 }
 
 export default initControlsRotate;

@@ -117,9 +117,12 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
+    this.canvas.freeDrawingBrush.color = '#ff0000'
+    this.canvas.freeDrawingBrush.width = 5
+    
     initHotKeys(this.canvas);
-    // initControls(this.canvas);
-    // initControlsRotate(this.canvas);
+    initControls(this.canvas);
+    initControlsRotate(this.canvas);
     this.initEvent();
   }
 
@@ -246,7 +249,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 自由绘制
   public drawFreeDraw(options?: any) {
-    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, color: "#ff0000", width: 5, ...options });
+    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, { ...this.options, ...options });
     this.canvas.isDrawingMode = true;
   }
 
