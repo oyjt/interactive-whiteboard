@@ -4,6 +4,7 @@
 
 import { Canvas, Object } from 'fabric/fabric-impl';
 import hotkeys from 'hotkeys-js';
+import FabricCanvas from './index';
 
 const keyNames = {
   lrdu: 'left,right,down,up', // 左右上下
@@ -39,7 +40,7 @@ function copyElement(canvas:Canvas) {
   });
 }
 
-function initHotkeys(canvas: Canvas) {
+function initHotkeys(canvas: Canvas, fabricCanvas: FabricCanvas) {
   // 删除快捷键
   hotkeys(keyNames.backspace, () => {
     const activeObject = canvas.getActiveObjects();
@@ -75,6 +76,15 @@ function initHotkeys(canvas: Canvas) {
 
   // 复制粘贴
   copyElement(canvas);
+
+  // 撤销
+  hotkeys(keyNames.ctrlz, () => {
+    fabricCanvas.undo()
+  });
+  // 重做
+  hotkeys(keyNames.ctrly, () => {
+    fabricCanvas.redo()
+  });
 }
 
 export default initHotkeys;

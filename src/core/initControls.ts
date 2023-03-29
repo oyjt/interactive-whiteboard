@@ -200,7 +200,7 @@ function initControls(canvas: Canvas) {
   // 选中样式
   fabric.Object.prototype.set({
     transparentCorners: false,
-    borderColor: '#51B9F9',
+    borderColor: '#FF0000',
     cornerColor: '#FFF',
     borderScaleFactor: 2.5,
     cornerStyle: 'circle',

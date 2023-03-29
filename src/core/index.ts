@@ -101,7 +101,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private startY = 0;
   private options: ShapeOptions = {
     stroke: "#ff0000",
-    strokeWidth: 2,
+    strokeWidth: 5,
     fill: "transparent",
     opacity: 1,
   };
@@ -116,7 +116,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
     this.setDrawingTool("pencil")
     
-    initHotKeys(this.canvas);
+    initHotKeys(this.canvas, this);
     initControls(this.canvas);
     initControlsRotate(this.canvas);
     this.initEvent();
@@ -187,6 +187,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     // this.canvas.off('mouse:up');
     this.canvas.isDrawingMode = false;
     this.canvas.selection = false;
+
     this.drawingTool = tool;
     if (tool === "pencil") {
       this.drawFreeDraw();
@@ -194,6 +195,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       this.eraser();
     } else if (tool === "select") {
       this.canvas.selection = true;
+      this.canvas.defaultCursor = 'auto'
     }
   }
 
@@ -206,6 +208,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const rect = new fabric.Rect({ ...this.options, ...options });
     this.canvas.add(rect);
     this.currentShape = rect;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(rect);
   }
 
@@ -214,6 +217,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const triangle = new fabric.Triangle({ ...this.options, ...options });
     this.canvas.add(triangle);
     this.currentShape = triangle;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(triangle);
   }
 
@@ -222,6 +226,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const circle = new fabric.Circle({ ...this.options, ...options });
     this.canvas.add(circle);
     this.currentShape = circle;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(circle);
   }
 
@@ -230,6 +235,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const ellipse = new fabric.Ellipse({ ...this.options, ...options });
     this.canvas.add(ellipse);
     this.currentShape = ellipse;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(ellipse);
   }
 
@@ -238,6 +244,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const line = new fabric.Line([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(line);
     this.currentShape = line;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(line);
   }
 
@@ -246,27 +253,30 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const arrow = new Arrow([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(arrow);
     this.currentShape = arrow;
+    this.canvas.defaultCursor = 'crosshair'
     // this.setActiveObject(arrow);
   }
 
   // 自由绘制
-  public drawFreeDraw(options?: any) {
-    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas, options);
+  public drawFreeDraw() {
+    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
     this.canvas.freeDrawingBrush.color = '#ff0000'
     this.canvas.freeDrawingBrush.width = 5
-    this.canvas.freeDrawingCursor = 'auto'
+    this.canvas.freeDrawingCursor = 'default'
     this.canvas.isDrawingMode = true;
   }
 
   // 绘制文本
   public drawText(text: string, options?: ITextOptions): void {
-    const textObj = new fabric.IText(text, {fontSize: 18, fill:'#ff0000', ...options });
+    const textObj = new fabric.IText(text, {fontSize: 18, fill:'#ff0000', editingBorderColor: '#ff0000', padding: 5, ...options });
     this.canvas.add(textObj);
+    this.canvas.defaultCursor = 'text'
     this.currentShape = textObj;
     // 文本打开编辑模式
     textObj.enterEditing();
     // 文本编辑框获取焦点
     textObj.hiddenTextarea.focus()
+    this.setActiveObject(textObj);
   }
 
   // 插入图片
@@ -281,7 +291,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public eraser(options?: any): void {
     this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, options);
     this.canvas.freeDrawingBrush.width = 10
-    this.canvas.freeDrawingCursor = 'auto'
+    this.canvas.freeDrawingCursor = 'default'
     this.canvas.isDrawingMode = true;
   }
 
@@ -335,20 +345,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.on("mouse:down", this.onMouseDown.bind(this));
     this.canvas.on("mouse:move", this.onMouseMove.bind(this));
     this.canvas.on("mouse:up", this.onMouseUp.bind(this));
-
-    // 绑定按键事件，实现撤销和重做
-    document.addEventListener("keydown", (event) => {
-      if (event.ctrlKey && event.key === "z") {
-        this.undo();
-      } else if (event.ctrlKey && event.key === "y") {
-        this.redo();
-      }
-    });
   }
 
   // 鼠标按下事件处理函数
   private onMouseDown(event: IEvent) {
-    if (!event.pointer) return;
+    // 如果当前有活动的元素则不添加
+    const activeObject = this.canvas.getActiveObject();
+    if (!event.pointer || activeObject) return;
     this.isDrawing = true;
     const { x, y } = event.pointer;
     this.startX = x;
@@ -476,26 +479,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     return this.canvas.toJSON();
   }
 
-  public set isDrawingMode(value: boolean | undefined) {
-    this.canvas.isDrawingMode = value;
-  }
-
-  public get isDrawingMode(): boolean | undefined {
-    return this.canvas.isDrawingMode;
-  }
-
-  public get selection() {
-    return this.canvas.getActiveObject();
-  }
-
-  public set selection(object: IObject | null) {
-    if (object) {
-      this.setActiveObject(object);
-    } else {
-      this.canvas.discardActiveObject();
-    }
-  }
-
   /**
    * 缩放（以画布中心点放大）
    * @param ratio 缩放比例（0~1）
@@ -523,7 +506,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 销毁事件监听
   public destroy() {
-    document.removeEventListener("keydown", this.undo);
     this.removeAllListeners();
     // 销毁画布
     // this.canvas.removeListeners();
