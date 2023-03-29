@@ -295,13 +295,23 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.isDrawingMode = true;
   }
 
+  // 获取撤销步数
+  public getUndoSteps() {
+    return this.undoStack.length
+  }
+
+  // 获取重做步数
+  public getRedoSteps() {
+    return this.redoStack.length
+  }
+
   // 撤销
   public undo(): void {
     const object = this.undoStack.pop();
     if (object) {
       this.redoStack.push(object);
       this.canvas.remove(object);
-      // this.emit('undo', object);
+      this.emit('undo', object as any);
     }
   }
 
@@ -311,7 +321,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     if (object) {
       this.undoStack.push(object);
       this.canvas.add(object);
-      // this.emitter.emit('redo', object);
+      this.emit('redo', object as any);
     }
   }
 

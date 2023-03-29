@@ -9,7 +9,7 @@
 </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, Ref } from 'vue'
+import { inject, onMounted, ref, Ref } from 'vue'
 import FabricCanvas from '@/core'
 import redo from "./image/redo.svg";
 import undo from "./image/undo.svg";
@@ -17,20 +17,43 @@ import redoDisabled from "./image/redo-disabled.svg";
 import undoDisabled from "./image/undo-disabled.svg";
 
 const canvas = inject<Ref<FabricCanvas>>('canvas');
-const undoSteps = ref<Number>(0);
-const redoSteps = ref<Number>(0);
+const undoSteps = ref<number>(0);
+const redoSteps = ref<number>(0);
 
 // 撤销
 function handleUndo() {
     if(!canvas?.value) return;
     canvas.value.undo();
+    updateSteps()
 }
 
 // 重做
 function handleRedo() {
     if(!canvas?.value) return;
     canvas.value.redo();
+    updateSteps()
 }
+
+// 更新步数
+function updateSteps() {
+  if(!canvas?.value) return;
+  undoSteps.value = canvas.value.getUndoSteps()
+  redoSteps.value = canvas.value.getRedoSteps()
+}
+
+function initEvent() {
+  if(!canvas?.value) return;
+  canvas.value.on('object:added', () => {
+    updateSteps()
+  })
+  canvas.value.on('object:modified', () => {
+    updateSteps()
+  })
+}
+
+onMounted(() => {
+  initEvent()
+})
 </script>
 <style lang="scss">
 .redo-undo {

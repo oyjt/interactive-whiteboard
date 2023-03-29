@@ -17,7 +17,17 @@
 
 ## 使用说明
 
+1. 安装依赖
 ```
 pnpm init
-pnpm dev
 ``` 
+
+2. 进入`node_modules/fabric`执行下面的命令
+```
+node build.js modules=ALL exclude=gestures,accessors,erasing requirejs minifier=uglifyjs
+```
+
+3. 运行项目
+```
+pnpm dev
+```
