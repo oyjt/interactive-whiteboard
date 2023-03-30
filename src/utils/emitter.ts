@@ -1,6 +1,4 @@
-import mitt, { Emitter, EventType } from 'mitt';
-
-type EventHandler<T> = (event: T) => void;
+import mitt, { Emitter, EventType, Handler } from 'mitt';
 
 class EventEmitter<T extends Record<EventType, unknown>> {
   private emitter: Emitter<T>;
@@ -9,11 +7,11 @@ class EventEmitter<T extends Record<EventType, unknown>> {
     this.emitter = mitt();
   }
 
-  on(eventName: keyof T, handler: EventHandler<T[keyof T]>) {
+  on(eventName: keyof T, handler: Handler<T[keyof T]>) {
     this.emitter.on(eventName, handler);
   }
 
-  off(eventName: keyof T, handler: EventHandler<T[keyof T]>) {
+  off(eventName: keyof T, handler: Handler<T[keyof T]>) {
     this.emitter.off(eventName, handler);
   }
 

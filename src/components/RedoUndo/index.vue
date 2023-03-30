@@ -1,56 +1,82 @@
 <template>
 <div class="redo-undo">
     <div class="redo-undo-controller-btn" @click="handleUndo">
-        <img :src="undoSteps === 0 ? undoDisabled : undo" alt="撤销"/>
+        <img :src="undoList.length ? undo : undoDisabled" alt="后退"/>
     </div>
     <div class="redo-undo-controller-btn" @click="handleRedo">
-        <img :src="redoSteps === 0 ? redoDisabled : redo" alt="恢复"/>
+        <img :src="redoList.length ? redo : redoDisabled" alt="重做"/>
     </div>
 </div>
 </template>
 <script setup lang="ts">
 import { inject, onMounted, ref, Ref } from 'vue'
 import FabricCanvas from '@/core'
+import { Object as IObject } from "fabric/fabric-impl";
+import { keyNames, hotkeys } from '@/core/initHotKeys';
 import redo from "./image/redo.svg";
 import undo from "./image/undo.svg";
 import redoDisabled from "./image/redo-disabled.svg";
 import undoDisabled from "./image/undo-disabled.svg";
 
-// 最大步数
-// const maxStep = 10;
+interface IJson { version: string; objects: IObject[] }
+
 const canvas = inject<Ref<FabricCanvas>>('canvas');
-const undoSteps = ref<number>(0);
-const redoSteps = ref<number>(0);
+// 最大步数
+const maxStep = 10;
+// 回放标识
+let isReplay = false; 
+// 撤销列表
+const undoList = ref<IJson[]>([]);
+// 重做列表
+const redoList = ref<IJson[]>([]);
+
+// 根据数据渲染
+function renderCanvas(data:IJson) {
+  if(!canvas?.value) return;
+  isReplay = true;
+  canvas.value.clearCanvas();
+  canvas.value.loadFromJSON(data, () => {
+    canvas.value.renderAll();
+    isReplay = false;
+  });
+}
 
 // 撤销
 function handleUndo() {
-    if(!canvas?.value) return;
-    canvas.value.undo();
-    updateSteps()
+    if(!canvas?.value || !undoList.value.length) return;
+    const canvasState = undoList.value.pop();
+    if(!canvasState) return;
+    redoList.value.push(canvasState);
+    renderCanvas(canvasState);
 }
 
 // 重做
 function handleRedo() {
-    if(!canvas?.value) return;
-    canvas.value.redo();
-    updateSteps()
+    if(!canvas?.value||!redoList.value.length) return;
+    const canvasState = redoList.value.pop();
+    if(!canvasState) return;
+    undoList.value.push(canvasState);
+    renderCanvas(canvasState);
 }
 
-// 更新步数
-function updateSteps() {
-  if(!canvas?.value) return;
-  undoSteps.value = canvas.value.getUndoSteps()
-  redoSteps.value = canvas.value.getRedoSteps()
+function addToUndoStack() {
+  if(!canvas?.value || isReplay) return;
+  const data = canvas.value.toJSON()
+  if(undoList.value.length > maxStep) {
+    undoList.value.shift();
+  }
+  undoList.value.push(data);
+  redoList.value = [];
 }
 
 function initEvent() {
   if(!canvas?.value) return;
-  canvas.value.on('object:added', () => {
-    updateSteps()
-  })
-  canvas.value.on('object:modified', () => {
-    updateSteps()
-  })
+  canvas.value.on('object:added', addToUndoStack)
+  canvas.value.on('object:modified', addToUndoStack)
+  canvas.value.on('object:removed', addToUndoStack)
+
+  hotkeys(keyNames.ctrlz, handleUndo);
+  hotkeys(keyNames.ctrly, handleRedo);
 }
 
 onMounted(() => {
