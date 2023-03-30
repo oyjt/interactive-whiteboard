@@ -16,6 +16,8 @@ import undo from "./image/undo.svg";
 import redoDisabled from "./image/redo-disabled.svg";
 import undoDisabled from "./image/undo-disabled.svg";
 
+// 最大步数
+// const maxStep = 10;
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 const undoSteps = ref<number>(0);
 const redoSteps = ref<number>(0);

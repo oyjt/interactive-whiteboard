@@ -15,7 +15,6 @@ import {
   Circle,
   Ellipse,
   Line,
-  IText,
 } from "fabric/fabric-impl";
 import EventEmitter from "@/utils/emitter";
 import Arrow from "./objects/Arrow";
@@ -90,10 +89,13 @@ interface ShapeOptions {
   opacity?: number;
 }
 
+interface IJson { version: string; objects: IObject[] }
+
 class FabricCanvas extends EventEmitter<FabricEvents> {
   private canvas: ICanvas;
-  private undoStack: IObject[] = [];
-  private redoStack: IObject[] = [];
+  private undoStack: IJson[] = [];
+  private redoStack: IJson[] = [];
+  private historyReplay: boolean = false;
   private currentShape: IObject | null = null;
   private drawingTool: DrawingTool = "";
   private isDrawing = false;
@@ -182,6 +184,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 设置绘图工具
   public setDrawingTool(tool: DrawingTool) {
+    if(this.drawingTool === tool) return;
     // this.canvas.off('mouse:down');
     // this.canvas.off('mouse:move');
     // this.canvas.off('mouse:up');
@@ -274,6 +277,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.currentShape = textObj;
     // 文本打开编辑模式
     textObj.enterEditing();
+    // textObj.exitEditing();
     // 文本编辑框获取焦点
     textObj.hiddenTextarea.focus()
     this.setActiveObject(textObj);
@@ -305,23 +309,42 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     return this.redoStack.length
   }
 
+  // 添加到回放堆栈
+  public addToUndoStack(): void {
+    this.undoStack.push(this.cloneCanvasState());
+    this.redoStack = [];
+  }
+
+  // 克隆画布状态
+  private cloneCanvasState(): IJson {
+    return fabric.util.object.clone(this.canvas.toJSON());
+  }
+
+  // 加载画布
+  private loadCanvasState(canvasState: IJson): void {
+    this.historyReplay = true;
+    this.canvas.clear();
+    this.canvas.loadFromJSON(canvasState, () => {
+      this.canvas.renderAll();
+      this.historyReplay = false;
+    });
+  }
+
   // 撤销
   public undo(): void {
-    const object = this.undoStack.pop();
-    if (object) {
-      this.redoStack.push(object);
-      this.canvas.remove(object);
-      this.emit('undo', object as any);
+    if (this.undoStack.length > 0) {
+      const canvasState = this.undoStack.pop();
+      this.redoStack.push(this.cloneCanvasState());
+      this.loadCanvasState(canvasState as IJson);
     }
   }
 
   // 重做
   public redo(): void {
-    const object = this.redoStack.pop();
-    if (object) {
-      this.undoStack.push(object);
-      this.canvas.add(object);
-      this.emit('redo', object as any);
+    if (this.redoStack.length > 0) {
+      const canvasState = this.redoStack.pop();
+      this.undoStack.push(this.cloneCanvasState());
+      this.loadCanvasState(canvasState as IJson);
     }
   }
 
@@ -329,21 +352,24 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private initEvent() {
     // 绑定添加对象事件，将当前画布状态保存到撤销栈中
     this.canvas.on("object:added", (e: any) => {
-      this.undoStack.push(e.target);
-      // this.redoStack = [];
+      if(this.historyReplay) return
+      this.addToUndoStack();
       this.emit("object:added", e);
+      console.log('添加对象')
     });
 
     this.canvas.on("object:modified", (e: any) => {
-      // undoStack.push(this.canvas.toJSON());
-      this.undoStack.push(e.target);
-      // this.redoStack = [];
+      if(this.historyReplay) return
+      this.addToUndoStack();
       this.emit("object:modified", e);
+      console.log('修改对象')
     });
 
     this.canvas.on("object:removed", (e) => {
-      // undoStack.push(this.canvas.toJSON());
+      if(this.historyReplay) return
+      this.addToUndoStack();
       this.emit("object:removed", e);
+      console.log('删除对象')
     });
 
     // 画布重绘后同步到远程
@@ -470,14 +496,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 鼠标抬起事件处理函数
   private onMouseUp() {
     this.isDrawing = false;
-    if (this.currentShape) {
-      const text = this.currentShape as IText;
-      if (text.text) {
-        this.removeObject(text);
-      } else {
-        // text.enterEditing();
-      }
-    }
     this.currentShape = null;
   }
 

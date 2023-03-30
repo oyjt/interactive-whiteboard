@@ -32,7 +32,6 @@
 <script setup lang="ts">
 import {onMounted, provide, ref} from 'vue'
 import { fabric } from 'fabric';
-import { Canvas as ICanvas } from 'fabric/fabric-impl'
 import FabricCanvas from './core'
 import ToolBox from './components/ToolBox/index.vue'
 import RedoUndo from './components/RedoUndo/index.vue'
@@ -40,11 +39,13 @@ import ZoomController from './components/ZoomController/index.vue'
 import PageController from './components/PageController/index.vue'
 import PreviewController from './components/PreviewController/index.vue'
 import pages from './assets/images/pages.svg'
+import { gzip, ungzip } from '@/utils/index'
+import { Canvas } from 'fabric/fabric-impl';
 
 const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
 let canvas1: FabricCanvas;
-let canvas2: ICanvas;
+let canvas2: Canvas;
 
 const isPreviewShow = ref<boolean>(false)
 
@@ -60,7 +61,9 @@ function init() {
 
     // 画布重绘后同步到远程
   canvas1.on('after:render', () => {
-    canvas2?.loadFromJSON(canvas1.toJSON(), ()=>{
+    const compressedData = gzip(canvas1.toJSON());
+    const jsonData = ungzip(compressedData);
+    canvas2?.loadFromJSON(jsonData, ()=>{
       console.log('画布同步成功！');
     });
   })
