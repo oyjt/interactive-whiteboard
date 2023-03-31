@@ -301,17 +301,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     // 绑定添加对象事件，将当前画布状态保存到撤销栈中
     this.canvas.on("object:added", (e: any) => {
       this.emit("object:added", e);
-      console.log('%c [ object:added ]-304', 'font-size:13px; background:pink; color:#bf2c9f;')
     });
 
     this.canvas.on("object:modified", (e: any) => {
       this.emit("object:modified", e);
-      console.log('%c [ object:modified ]-309', 'font-size:13px; background:pink; color:#bf2c9f;')
     });
 
     this.canvas.on("object:removed", (e) => {
       this.emit("object:removed", e);
-      console.log('%c [ object:removed ]-314', 'font-size:13px; background:pink; color:#bf2c9f;')
     });
 
     // 画布重绘后同步到远程

@@ -9,7 +9,7 @@
 </div>
 </template>
 <script setup lang="ts">
-import { inject, onMounted, ref, Ref } from 'vue'
+import { inject, onMounted, ref, Ref, watchEffect } from 'vue'
 import FabricCanvas from '@/core'
 import { Object as IObject } from "fabric/fabric-impl";
 import { keyNames, hotkeys } from '@/core/initHotKeys';
@@ -79,8 +79,10 @@ function initEvent() {
   hotkeys(keyNames.ctrly, handleRedo);
 }
 
-onMounted(() => {
-  initEvent()
+watchEffect(() => {
+  if(canvas?.value) {
+    initEvent()
+  }
 })
 </script>
 <style lang="scss">
