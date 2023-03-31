@@ -9,7 +9,7 @@
 </div>
 </template>
 <script setup lang="ts">
-import { inject, onMounted, ref, Ref, watchEffect } from 'vue'
+import { inject, ref, Ref, watchEffect } from 'vue'
 import FabricCanvas from '@/core'
 import { Object as IObject } from "fabric/fabric-impl";
 import { keyNames, hotkeys } from '@/core/initHotKeys';

@@ -283,7 +283,18 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 插入图片
   public insertImage(url: string, options?: IImageOptions): void {
     fabric.Image.fromURL(url, (img: IImage) => {
-      options && img.set(options);
+      if(options) {
+        img.set(options);
+      } else {
+        // 计算图片居中的位置
+        const canvasWidth = this.canvas.getWidth();
+        const canvasHeight = this.canvas.getHeight();
+        const imageWidth = (img.width as number) * (img.scaleX as number);
+        const imageHeight = (img.height as number) * (img.scaleY as number);
+        const left = (canvasWidth - imageWidth) / 2;
+        const top = (canvasHeight - imageHeight) / 2;
+        img.set({ left, top });
+      }
       this.canvas.add(img);
     });
   }
