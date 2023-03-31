@@ -218,7 +218,7 @@ watchEffect(()=> {
 }
 
 .page-out-box {
-    width: 240px;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -251,8 +251,6 @@ watchEffect(()=> {
     background-color: #F4F4F4;
     border-radius: 4px;
     cursor: pointer;
-    border-width: 1px;
-    border-style: solid;
     border: 1px solid #F4F4F4;
     &.active {
         border-color: #71C3FC;
