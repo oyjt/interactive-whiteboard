@@ -10,7 +10,14 @@
       <div class="zoom-controller-box">
         <ZoomController></ZoomController>
       </div>
-      <div class="page-controller-box">
+      <div class="room-controller-box" v-show="!isPreviewShow">
+        <div class="page-controller-mid-box">
+          <div className="page-preview-cell" @click="insertPPT">
+              <img style="width: 28px" :src="folder" alt="文件"/>
+          </div>
+        </div>
+      </div>
+      <div class="page-controller-box" v-show="isShowPPTControl">
           <div className="page-controller-mid-box">
               <PageController></PageController>
               <div className="page-preview-cell" @click="handlePreviewState(true)">
@@ -18,7 +25,7 @@
               </div>
           </div>
       </div>
-      <div class="preview-controller-box" v-show="isPreviewShow">
+      <div class="preview-controller-box" v-show="isShowPPTControl&&isPreviewShow">
         <PreviewController @handlePreviewState="handlePreviewState"></PreviewController>
       </div>
       <canvas id="canvas" width="800" height="450"></canvas>
@@ -39,6 +46,7 @@ import ZoomController from './components/ZoomController/index.vue'
 import PageController from './components/PageController/index.vue'
 import PreviewController from './components/PreviewController/index.vue'
 import pages from './assets/images/pages.svg'
+import folder from "./assets/images/folder.svg";
 import { gzip, ungzip } from '@/utils/index'
 import { Canvas } from 'fabric/fabric-impl';
 
@@ -46,8 +54,11 @@ const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
 let canvas1: FabricCanvas;
 let canvas2: Canvas;
+const pptImage = ['http://47.92.172.237/ppt.png',
+  'http://47.92.172.237/ppt1.png', 'http://47.92.172.237/ppt2.png', 'http://47.92.172.237/ppt3.png']
 
 const isPreviewShow = ref<boolean>(false)
+const isShowPPTControl = ref<boolean>(false)
 
 function init() {
   // 初始化画布
@@ -71,6 +82,12 @@ function init() {
 
 function handlePreviewState(state: boolean) {
   isPreviewShow.value = state;
+}
+
+
+function insertPPT() {
+  canvas1.insertImages(pptImage)
+  isShowPPTControl.value = true;
 }
 
 onMounted(() => {
@@ -110,6 +127,13 @@ onMounted(() => {
   left: 76px;
   z-index: 3;
   bottom: 8px;
+}
+
+.room-controller-box {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 100;
 }
 
 .page-controller-box {

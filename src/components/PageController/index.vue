@@ -18,7 +18,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, Ref } from 'vue'
+import { inject, ref, Ref, watchEffect } from 'vue'
 import FabricCanvas from '@/core'
 import next from "./image/next.svg";
 import nextDisabled from "./image/next-disabled.svg";
@@ -31,8 +31,7 @@ import lastDisabled from "./image/last-disable.svg";
 
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 const activeIndex = ref<number>(0);
-const scenes = ref<Array<string>>(['http://47.92.172.237/ppt.png',
-  'http://47.92.172.237/ppt1.png', 'http://47.92.172.237/ppt2.png', 'http://47.92.172.237/ppt3.png']);
+const scenes = ref<string[]>([]);
 
 // 图片渲染
 function renderImg() {
@@ -77,6 +76,17 @@ function setFirstStep() {
   activeIndex.value = 0;
   renderImg();
 }
+
+watchEffect(()=> {
+  if(canvas?.value) {
+    canvas.value.on('insert:images', (urls: string[]) => {
+        scenes.value = urls;
+    })
+    canvas.value.on('current:image', (index: number) => {
+      activeIndex.value = index;
+    })
+  }
+})
 </script>
 <style lang="scss">
 .whiteboard-annex-box {

@@ -19,8 +19,7 @@
         <div class="menu-annex-body">
             <div class="preview-cells-box">
                 <div class="page-out-box" v-for="(item, index) in scenes">
-                    <!-- :style="{borderColor: item.isActive ? "#71C3FC" : "#F4F4F4"}" -->
-                    <div @click="setScenePath(index)" class="page-box"> 
+                    <div @click="setScenePath(index)" class="page-box" :class="{active: activeIndex === index}"> 
                         <img class="ppt-image" :src="item" />
                     </div>
                     <div class="page-box-under">
@@ -38,13 +37,15 @@
 </template>
 <script setup lang="ts">
 
-import { ref } from 'vue';
+import { inject, Ref, ref, watchEffect } from 'vue';
 import close from "./image/close.svg";
 import addPage from "./image/add-page.svg";
 import deleteIcon from "./image/delete.svg";
+import FabricCanvas from '@/core';
 
-const scenes = ref<Array<string>>(['http://47.92.172.237/ppt.png',
-    'http://47.92.172.237/ppt1.png', 'http://47.92.172.237/ppt2.png', 'http://47.92.172.237/ppt3.png']);
+const canvas = inject<Ref<FabricCanvas>>('canvas');
+const scenes = ref<string[]>([]);
+const activeIndex = ref<number>(0);
 
 const emit = defineEmits(['handlePreviewState'])
 function handlePreviewState(state: boolean) {
@@ -52,12 +53,23 @@ function handlePreviewState(state: boolean) {
 }
 
 function setScenePath(index: number) {
-
+    canvas?.value.setCurrentImage(index)
 }
 
 function removeScenes(index: number) {
 
 }
+
+watchEffect(()=> {
+  if(canvas?.value) {
+    canvas.value.on('insert:images', (urls: string[]) => {
+        scenes.value = urls;
+    })
+    canvas.value.on('current:image', (index: number) => {
+      activeIndex.value = index;
+    })
+  }
+})
 </script>
 <style lang="scss">
 .menu-title-line {
@@ -241,6 +253,10 @@ function removeScenes(index: number) {
     cursor: pointer;
     border-width: 1px;
     border-style: solid;
+    border: 1px solid #F4F4F4;
+    &.active {
+        border-color: #71C3FC;
+    }
 }
 
 .page-box-under {

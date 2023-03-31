@@ -65,7 +65,7 @@ interface FabricEvents {
   "mouse:move": IEvent;
   "mouse:up": IEvent;
   "after:render": IEvent;
-  [key: string | symbol]: IEvent | undefined;
+  [key: string | symbol]: IEvent | any | undefined;
 }
 
 // 定义绘图工具类型
@@ -104,6 +104,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     fill: "transparent",
     opacity: 1,
   };
+  private images: string[] = [];
+  private curImageIndex = 0;
 
   constructor(canvasId: string) {
     super();
@@ -299,6 +301,20 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
   }
 
+  // 插入多张图片
+  public insertImages(urls: string[]):void {
+    this.images = urls;
+    this.setCurrentImage(0)
+    this.emit('insert:images', urls)
+  }
+
+  // 设置当前显示图片
+  public setCurrentImage(index: number):void {
+    this.curImageIndex = index;
+    this.insertImage(this.images[this.curImageIndex]);
+    this.emit('current:image', index)
+  }
+ 
   // 橡皮擦(IEraserBrushOptions)
   public eraser(options?: any): void {
     this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, options);
