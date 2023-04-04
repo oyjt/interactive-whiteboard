@@ -47,7 +47,7 @@ import PageController from './components/PageController/index.vue'
 import PreviewController from './components/PreviewController/index.vue'
 import pages from './assets/images/pages.svg'
 import folder from "./assets/images/folder.svg";
-import { gzip, ungzip } from '@/utils/index'
+import { gzip, ungzip, uint8ArrayToBase64, base64ToUint8Array } from '@/utils/index'
 import { Canvas } from 'fabric/fabric-impl';
 
 const canvas = ref<FabricCanvas>();
@@ -72,8 +72,11 @@ function init() {
 
     // 画布重绘后同步到远程
   canvas1.on('after:render', () => {
+    console.log(canvas1.toJSON());
     const compressedData = gzip(canvas1.toJSON());
-    const jsonData = ungzip(compressedData);
+    const text = uint8ArrayToBase64(compressedData);
+    const data = base64ToUint8Array(text)
+    const jsonData = ungzip(data);
     canvas2?.loadFromJSON(jsonData, ()=>{
       console.log('画布同步成功！');
     });
