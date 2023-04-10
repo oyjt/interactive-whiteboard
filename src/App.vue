@@ -54,8 +54,14 @@ const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
 let canvas1: FabricCanvas;
 let canvas2: Canvas;
-const pptImage = ['http://47.92.172.237/ppt.png',
-  'http://47.92.172.237/ppt1.png', 'http://47.92.172.237/ppt2.png', 'http://47.92.172.237/ppt3.png']
+const pptImage = [
+  '/src/assets/ppt/image1.jpeg',
+  '/src/assets/ppt/image2.jpeg', 
+  '/src/assets/ppt/image3.jpeg', 
+  '/src/assets/ppt/image4.jpeg', 
+  '/src/assets/ppt/image5.jpeg', 
+  '/src/assets/ppt/image6.jpeg'
+]
 
 const isPreviewShow = ref<boolean>(false)
 const isShowPPTControl = ref<boolean>(false)

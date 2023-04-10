@@ -50,8 +50,8 @@ function handlePptPreviousStep() {
 
 function handlePptNextStep() {
   ++activeIndex.value;
-  if (activeIndex.value >= 4) {
-    activeIndex.value = 3;
+  if (activeIndex.value >= scenes.value.length-1) {
+    activeIndex.value = scenes.value.length-1;
     return;
   }
   renderImg();
