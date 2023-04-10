@@ -140,16 +140,25 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
   }
 
-  // 设置画布背景图片
+  // 设置画布背景图片（居中显示）
   public setBackgroundImage(imageUrl: string, options?: IImageOptions): void {
     fabric.Image.fromURL(imageUrl, (image: IImage) => {
-      this.canvas.setBackgroundImage(
-        image,
-        () => {
-          this.canvas.renderAll();
-        },
-        options
-      );
+      // 计算图片居中的位置
+      const canvasWidth = this.canvas.getWidth();
+      const canvasHeight = this.canvas.getHeight();
+      // 图片高度充满画布，宽度等比缩放
+      const scale = canvasHeight / (image.height as number);
+      const imageWidth = (image.width as number) * scale;
+
+      image.set({
+        scaleX: scale,
+        scaleY: scale,
+        top: 0,
+        left: (canvasWidth - imageWidth) / 2,
+      });
+      this.canvas.setBackgroundImage(image, () => {
+        this.canvas.renderAll();
+      }, options);
     });
   }
 
@@ -159,6 +168,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   public removeObject(object: IObject): void {
     this.canvas.remove(object);
+  }
+
+  // 移除所有对象
+  public removeAllObject() {
+    this.canvas.getObjects().forEach((obj) => {
+      this.canvas.remove(obj);
+    });
   }
 
   public getObjects(): IObject[] {
@@ -201,9 +217,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
-  public setOptions = (options: ShapeOptions) => {
+  public setOptions(options: ShapeOptions) {
     this.options = { ...this.options, ...options };
-  };
+  }
 
   // 绘制矩形
   public drawRect(options: IRectOptions): void {
@@ -301,17 +317,17 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
   }
 
-  // 插入多张图片
-  public insertImages(urls: string[]):void {
+  // 插入ppt图片
+  public insertPPT(urls: string[]):void {
     this.images = urls;
-    this.setCurrentImage(0)
+    this.setCurrentScense(0)
     this.emit('insert:images', urls)
   }
 
-  // 设置当前显示图片
-  public setCurrentImage(index: number):void {
+  // 设置当前显示ppt图片
+  public setCurrentScense(index: number):void {
     this.curImageIndex = index;
-    this.insertImage(this.images[this.curImageIndex]);
+    this.setBackgroundImage(this.images[this.curImageIndex]);
     this.emit('current:image', index)
   }
  

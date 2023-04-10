@@ -35,9 +35,8 @@ const scenes = ref<string[]>([]);
 
 // 图片渲染
 function renderImg() {
-  const url = scenes.value[activeIndex.value];
   canvas?.value.clearCanvas();
-  canvas?.value.insertImage(url);
+  canvas?.value.setCurrentScense(activeIndex.value);
 }
 
 function handlePptPreviousStep() {

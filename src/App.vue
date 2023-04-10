@@ -66,7 +66,7 @@ function init() {
   canvas.value = canvas1;
 
   // 初始化画布2
-  canvas2 = new fabric.Canvas('canvas2');
+  canvas2 = new fabric.StaticCanvas('canvas2');
   canvas2.selection = false;
   canvas2.skipTargetFind = true; 
 
@@ -89,7 +89,7 @@ function handlePreviewState(state: boolean) {
 
 
 function insertPPT() {
-  canvas1.insertImages(pptImage)
+  canvas1.insertPPT(pptImage)
   isShowPPTControl.value = true;
 }
 
