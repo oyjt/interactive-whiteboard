@@ -48,12 +48,9 @@ import PreviewController from './components/PreviewController/index.vue'
 import pages from './assets/images/pages.svg'
 import folder from "./assets/images/folder.svg";
 import { gzip, ungzip, uint8ArrayToBase64, base64ToUint8Array } from '@/utils/index'
-import { Canvas } from 'fabric/fabric-impl';
 
 const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
-let canvas1: FabricCanvas;
-let canvas2: Canvas;
 const pptImage = [
   '/src/assets/ppt/image1.jpeg',
   '/src/assets/ppt/image2.jpeg', 
@@ -68,13 +65,11 @@ const isShowPPTControl = ref<boolean>(false)
 
 function init() {
   // 初始化画布
-  canvas1 = new FabricCanvas('canvas');
+  const canvas1 = new FabricCanvas('canvas');
   canvas.value = canvas1;
 
   // 初始化画布2
-  canvas2 = new fabric.StaticCanvas('canvas2');
-  canvas2.selection = false;
-  canvas2.skipTargetFind = true; 
+  const canvas2 = new fabric.StaticCanvas('canvas2');
 
     // 画布重绘后同步到远程
   canvas1.on('after:render', () => {
@@ -95,7 +90,7 @@ function handlePreviewState(state: boolean) {
 
 
 function insertPPT() {
-  canvas1.insertPPT(pptImage)
+  canvas.value?.insertPPT(pptImage)
   isShowPPTControl.value = true;
 }
 

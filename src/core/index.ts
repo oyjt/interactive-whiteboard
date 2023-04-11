@@ -48,13 +48,7 @@ import initControlsRotate from "./initControlsRotate";
  * canvas.erase({ width: 10, color: 'white' });
  *
  * // 画笔
- * canvas.draw({ width: 5, color: 'green' });
- *
- * // 撤销
- * canvas.undo();
- *
- * // 重做
- * canvas.redo();
+ * canvas.drawFreeDraw();
  */
 
 interface FabricEvents {

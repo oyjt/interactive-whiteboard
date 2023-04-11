@@ -2,6 +2,8 @@
 
 使用`vite`+`vue3`+`typescript`+`fabric`创建的互动白板项目
 
+![](/example/demo.png)
+
 ## 主要功能
 - [x] 撤销重做
 - [x] 画布缩放

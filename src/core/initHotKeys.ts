@@ -76,15 +76,6 @@ function initHotkeys(canvas: Canvas, fabricCanvas: FabricCanvas) {
 
   // 复制粘贴
   copyElement(canvas);
-
-  // 撤销
-  hotkeys(keyNames.ctrlz, () => {
-    fabricCanvas.undo()
-  });
-  // 重做
-  hotkeys(keyNames.ctrly, () => {
-    fabricCanvas.redo()
-  });
 }
 
 export default initHotkeys;
