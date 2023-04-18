@@ -83,9 +83,9 @@ function handlePreviewState(state: boolean) {
 
 function insertPPT() {
   // ppt图片资源
-  const images = import.meta.globEager('@/assets/ppt/*.jpeg')
-  const pptImage = Object.keys(images)
-  canvas.value?.insertPPT(pptImage)
+  const images = import.meta.glob('@/assets/ppt/*.jpeg', { eager: true, import: 'default' })
+  const pptImage = Object.values(images)
+  canvas.value?.insertPPT(pptImage as string [])
   isShowPPTControl.value = true;
 }
 
