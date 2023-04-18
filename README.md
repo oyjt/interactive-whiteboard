@@ -4,6 +4,8 @@
 
 ![](/example/demo.png)
 
+预览地址：[icnpath.com/interactive-whiteboard/](icnpath.com/interactive-whiteboard/)
+
 ## 主要功能
 - [x] 撤销重做
 - [x] 画布缩放

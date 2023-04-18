@@ -11,14 +11,11 @@
 <script setup lang="ts">
 import { inject, ref, Ref, watchEffect } from 'vue'
 import FabricCanvas from '@/core'
-import { Object as IObject } from "fabric/fabric-impl";
 import { keyNames, hotkeys } from '@/core/initHotKeys';
 import redo from "./image/redo.svg";
 import undo from "./image/undo.svg";
 import redoDisabled from "./image/redo-disabled.svg";
 import undoDisabled from "./image/undo-disabled.svg";
-
-interface IJson { version: string; objects: IObject[] }
 
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 // 最大步数
@@ -26,12 +23,12 @@ const maxStep = 10;
 // 回放标识
 let isReplay = false; 
 // 撤销列表
-const undoList = ref<IJson[]>([]);
+const undoList = ref<any>([]);
 // 重做列表
-const redoList = ref<IJson[]>([]);
+const redoList = ref<any>([]);
 
 // 根据数据渲染
-function renderCanvas(data:IJson) {
+function renderCanvas(data: any) {
   if(!canvas?.value) return;
   isReplay = true;
   canvas.value.clearCanvas();

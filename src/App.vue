@@ -51,14 +51,14 @@ import { gzip, ungzip, uint8ArrayToBase64, base64ToUint8Array } from '@/utils/in
 
 const canvas = ref<FabricCanvas>();
 provide('canvas', canvas)
-const pptImage = [
-  '/src/assets/ppt/image1.jpeg',
-  '/src/assets/ppt/image2.jpeg', 
-  '/src/assets/ppt/image3.jpeg', 
-  '/src/assets/ppt/image4.jpeg', 
-  '/src/assets/ppt/image5.jpeg', 
-  '/src/assets/ppt/image6.jpeg'
-]
+// const pptImage = [
+//   '/src/assets/ppt/image1.jpeg',
+//   '/src/assets/ppt/image2.jpeg', 
+//   '/src/assets/ppt/image3.jpeg', 
+//   '/src/assets/ppt/image4.jpeg', 
+//   '/src/assets/ppt/image5.jpeg', 
+//   '/src/assets/ppt/image6.jpeg'
+// ]
 
 const isPreviewShow = ref<boolean>(false)
 const isShowPPTControl = ref<boolean>(false)
@@ -90,6 +90,9 @@ function handlePreviewState(state: boolean) {
 
 
 function insertPPT() {
+  // ppt图片资源
+  const images = import.meta.glob('@/assets/ppt/*.jpeg')
+  const pptImage = Object.keys(images)
   canvas.value?.insertPPT(pptImage)
   isShowPPTControl.value = true;
 }
