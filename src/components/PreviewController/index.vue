@@ -121,7 +121,7 @@ watchEffect(()=> {
     width: 100%;
     height: 100%;
     background-color: white;
-    overflow: scroll;
+    overflow-y: auto;
 }
 
 .menu-annex-body {

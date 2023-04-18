@@ -50,7 +50,7 @@ function handlePptPreviousStep() {
 
 function handlePptNextStep() {
   ++activeIndex.value;
-  if (activeIndex.value >= scenes.value.length-1) {
+  if (activeIndex.value >= scenes.value.length) {
     activeIndex.value = scenes.value.length-1;
     return;
   }
