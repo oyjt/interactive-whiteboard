@@ -6,9 +6,9 @@
                     预览
                 </div>
                 <div class="menu-title-left">
-                    <div class="menu-head-btn">
+                    <!-- <div class="menu-head-btn">
                         <img :src="addPage" alt="添加页面" />
-                    </div>
+                    </div> -->
                     <div class="menu-head-btn" :style="{ marginLeft: '8px' }" @click="handlePreviewState(false)">
                         <img :src="close" alt="关闭" />
                     </div>
