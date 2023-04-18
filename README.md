@@ -4,7 +4,7 @@
 
 ![](/example/demo.png)
 
-预览地址：[https://icnpath.com/interactive-whiteboard/](https://icnpath.com/icnpath.com/interactive-whiteboard/)
+预览地址：[https://icnpath.com/interactive-whiteboard/](https://icnpath.com/interactive-whiteboard/)
 
 ## 主要功能
 - [x] 撤销重做
