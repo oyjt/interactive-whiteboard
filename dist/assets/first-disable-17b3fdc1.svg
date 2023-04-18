@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>first-d</title>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+        <g id="切图" transform="translate(-128.000000, -296.000000)" stroke="#DBE1EA">
+            <polyline id="路径-11备份-5" transform="translate(141.000000, 308.000000) rotate(-360.000000) translate(-141.000000, -308.000000) " points="143 312 141 310 139 308 141 306 143 304"></polyline>
+            <line x1="137" y1="304" x2="137" y2="312" id="路径-4"></line>
+        </g>
+    </g>
+</svg>
