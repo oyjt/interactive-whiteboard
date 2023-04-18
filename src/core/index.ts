@@ -33,19 +33,19 @@ import initControlsRotate from "./initControlsRotate";
  * canvas.drawArrow(10, 50, 100, 50, { stroke: 'blue', strokeWidth: 2 });
  *
  * // 绘制矩形
- * canvas.drawRect(50, 150, 100, 50, { fill: 'green', stroke: 'black' });
+ * canvas.drawRect({ left: 50, top: 150, width: 100, height: 50, fill: 'green', stroke: 'black' });
  *
  * // 绘制圆形
- * canvas.drawCircle(200, 100, 50, { fill: 'yellow', stroke: 'black' });
+ * canvas.drawCircle({ left: 200, top: 100, radius: 50, fill: 'yellow', stroke: 'black' });
  *
- * / 绘制文本
- * canvas.drawText('Hello World!', 50, 250, { fontSize: 24, fill: 'red' });
+ * // 绘制文本
+ * canvas.drawText('Hello World!', { left: 50, top: 250, fontSize: 24, fill: 'red' })
  *
  * // 插入图片
  * canvas.insertImage('https://picsum.photos/200', { left: 50, top: 150, scaleX: 0.5, scaleY: 0.5 });
  *
  * // 橡皮擦
- * canvas.erase({ width: 10, color: 'white' });
+ * canvas.erase({ width: 10 });
  *
  * // 画笔
  * canvas.drawFreeDraw();
