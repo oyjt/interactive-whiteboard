@@ -473,6 +473,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private onMouseUp() {
     this.isDrawing = false;
     this.currentShape = null;
+    this.emit("mouse:up", null);
   }
 
   public toDataURL(options?: ICanvasOptions) {

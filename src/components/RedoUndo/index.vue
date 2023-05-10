@@ -1,12 +1,12 @@
 <template>
-<div class="redo-undo">
+  <div class="redo-undo">
     <div class="redo-undo-controller-btn" @click="handleUndo">
-        <img :src="undoList.length ? undo : undoDisabled" alt="后退"/>
+      <img :src="stage !== historyList.length ? undo : undoDisabled" alt="后退" />
     </div>
     <div class="redo-undo-controller-btn" @click="handleRedo">
-        <img :src="redoList.length ? redo : redoDisabled" alt="重做"/>
+      <img :src="stage ? redo : redoDisabled" alt="重做" />
     </div>
-</div>
+  </div>
 </template>
 <script setup lang="ts">
 import { inject, ref, Ref, watchEffect } from 'vue'
@@ -20,64 +20,62 @@ import undoDisabled from "./image/undo-disabled.svg";
 const canvas = inject<Ref<FabricCanvas>>('canvas');
 // 最大步数
 const maxStep = 10;
-// 回放标识
-let isReplay = false; 
-// 撤销列表
-const undoList = ref<any>([]);
-// 重做列表
-const redoList = ref<any>([]);
+// 当前阶段
+const stage = ref<number>(0);
+const historyList = ref<any>([]);
 
 // 根据数据渲染
 function renderCanvas(data: any) {
-  if(!canvas?.value) return;
-  isReplay = true;
+  if (!canvas?.value) return;
   canvas.value.clearCanvas();
   canvas.value.loadFromJSON(data, () => {
     canvas.value.renderAll();
-    isReplay = false;
   });
 }
 
 // 撤销
 function handleUndo() {
-    if(!canvas?.value || !undoList.value.length) return;
-    const canvasState = undoList.value.pop();
-    if(!canvasState) return;
-    redoList.value.push(canvasState);
+  const length = historyList.value.length;
+  if (!canvas?.value || !length) return;
+
+  if (stage.value < length) {
+    const canvasState = historyList.value[length - 1 - stage.value - 1];
     renderCanvas(canvasState);
+    stage.value += 1;
+  }
 }
 
 // 重做
 function handleRedo() {
-    if(!canvas?.value||!redoList.value.length) return;
-    const canvasState = redoList.value.pop();
-    if(!canvasState) return;
-    undoList.value.push(canvasState);
+  const length = historyList.value.length;
+  if (!canvas?.value || !length) return;
+
+  if (stage.value > 0) {
+    const canvasState = historyList.value[length - 1 - stage.value + 1];
     renderCanvas(canvasState);
+    stage.value -= 1;
+  }
 }
 
 function addToUndoStack() {
-  if(!canvas?.value || isReplay) return;
+  if (!canvas?.value) return;
   const data = canvas.value.toJSON()
-  if(undoList.value.length > maxStep) {
-    undoList.value.shift();
+  if (historyList.value.length > maxStep) {
+    historyList.value.shift();
   }
-  undoList.value.push(data);
-  redoList.value = [];
+  historyList.value.push(data);
 }
 
 function initEvent() {
-  if(!canvas?.value) return;
-  canvas.value.on('object:added', addToUndoStack)
-  canvas.value.on('object:modified', addToUndoStack)
-  canvas.value.on('object:removed', addToUndoStack)
+  if (!canvas?.value) return;
+  canvas.value.on('mouse:up', addToUndoStack)
 
   hotkeys(keyNames.ctrlz, handleUndo);
   hotkeys(keyNames.ctrly, handleRedo);
 }
 
 watchEffect(() => {
-  if(canvas?.value) {
+  if (canvas?.value) {
     initEvent()
   }
 })
@@ -94,7 +92,7 @@ watchEffect(() => {
   user-select: none;
   font-size: 12px;
   cursor: pointer;
-  box-shadow:0 4px 12px 0 rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .redo-undo-controller-btn {
@@ -106,9 +104,9 @@ watchEffect(() => {
   border-radius: 2px;
   margin-left: 2px;
   margin-right: 2px;
+
   &:hover {
-    background: rgba(33,35,36,0.1);
+    background: rgba(33, 35, 36, 0.1);
   }
 }
-
 </style>
