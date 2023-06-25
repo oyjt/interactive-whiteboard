@@ -422,8 +422,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
 
     const { x, y } = event.pointer;
-    const width = x - this.startX;
-    const height = y - this.startY;
+    const width = Math.abs(x - this.startX);
+    const height = Math.abs(y - this.startY);
 
     switch (this.drawingTool) {
       case "rectangle":
