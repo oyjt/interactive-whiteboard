@@ -83,7 +83,10 @@ interface ShapeOptions {
   opacity?: number;
 }
 
-interface IJson { version: string; objects: IObject[] }
+interface IJson {
+  version: string;
+  objects: IObject[];
+}
 
 class FabricCanvas extends EventEmitter<FabricEvents> {
   private canvas: ICanvas;
@@ -109,8 +112,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
-    this.setDrawingTool("pencil")
-    
+    this.setDrawingTool("pencil");
+
     initHotKeys(this.canvas, this);
     initControls(this.canvas);
     initControlsRotate(this.canvas);
@@ -150,9 +153,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         top: 0,
         left: (canvasWidth - imageWidth) / 2,
       });
-      this.canvas.setBackgroundImage(image, () => {
-        this.canvas.renderAll();
-      }, options);
+      this.canvas.setBackgroundImage(
+        image,
+        () => {
+          this.canvas.renderAll();
+        },
+        options
+      );
     });
   }
 
@@ -184,16 +191,16 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   public setWidth(value: number | string): void {
-    this.canvas.setWidth(value)
+    this.canvas.setWidth(value);
   }
-  
+
   public setHeight(value: number | string): void {
-    this.canvas.setHeight(value)
+    this.canvas.setHeight(value);
   }
 
   // 设置绘图工具
   public setDrawingTool(tool: DrawingTool) {
-    if(this.drawingTool === tool) return;
+    if (this.drawingTool === tool) return;
     // this.canvas.off('mouse:down');
     // this.canvas.off('mouse:move');
     // this.canvas.off('mouse:up');
@@ -207,7 +214,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       this.eraser();
     } else if (tool === "select") {
       this.canvas.selection = true;
-      this.canvas.defaultCursor = 'auto'
+      this.canvas.defaultCursor = "auto";
     }
   }
 
@@ -220,7 +227,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const rect = new fabric.Rect({ ...this.options, ...options });
     this.canvas.add(rect);
     this.currentShape = rect;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(rect);
   }
 
@@ -229,7 +236,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const triangle = new fabric.Triangle({ ...this.options, ...options });
     this.canvas.add(triangle);
     this.currentShape = triangle;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(triangle);
   }
 
@@ -238,7 +245,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const circle = new fabric.Circle({ ...this.options, ...options });
     this.canvas.add(circle);
     this.currentShape = circle;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(circle);
   }
 
@@ -247,7 +254,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const ellipse = new fabric.Ellipse({ ...this.options, ...options });
     this.canvas.add(ellipse);
     this.currentShape = ellipse;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(ellipse);
   }
 
@@ -256,7 +263,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const line = new fabric.Line([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(line);
     this.currentShape = line;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(line);
   }
 
@@ -265,37 +272,43 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const arrow = new Arrow([x1, y1, x2, y2], { ...this.options, ...options });
     this.canvas.add(arrow);
     this.currentShape = arrow;
-    this.canvas.defaultCursor = 'crosshair'
+    this.canvas.defaultCursor = "crosshair";
     // this.setActiveObject(arrow);
   }
 
   // 自由绘制
   public drawFreeDraw() {
     this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-    this.canvas.freeDrawingBrush.color = '#ff0000'
-    this.canvas.freeDrawingBrush.width = 5
-    this.canvas.freeDrawingCursor = 'default'
+    this.canvas.freeDrawingBrush.color = "#ff0000";
+    this.canvas.freeDrawingBrush.width = 5;
+    this.canvas.freeDrawingCursor = "default";
     this.canvas.isDrawingMode = true;
   }
 
   // 绘制文本
   public drawText(text: string, options?: ITextOptions): void {
-    const textObj = new fabric.IText(text, {fontSize: 18, fill:'#ff0000', editingBorderColor: '#ff0000', padding: 5, ...options });
+    const textObj = new fabric.IText(text, {
+      fontSize: 18,
+      fill: "#ff0000",
+      editingBorderColor: "#ff0000",
+      padding: 5,
+      ...options,
+    });
     this.canvas.add(textObj);
-    this.canvas.defaultCursor = 'text'
+    this.canvas.defaultCursor = "text";
     this.currentShape = textObj;
     // 文本打开编辑模式
     textObj.enterEditing();
     // textObj.exitEditing();
     // 文本编辑框获取焦点
-    textObj.hiddenTextarea.focus()
+    textObj.hiddenTextarea.focus();
     this.setActiveObject(textObj);
   }
 
   // 插入图片
   public insertImage(url: string, options?: IImageOptions): void {
     fabric.Image.fromURL(url, (img: IImage) => {
-      if(options) {
+      if (options) {
         img.set(options);
       } else {
         // 计算图片居中的位置
@@ -312,25 +325,30 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   // 插入ppt图片
-  public insertPPT(urls: string[]):void {
+  public insertPPT(urls: string[]): void {
     this.images = urls;
-    this.setCurrentScense(0)
-    this.emit('insert:images', urls)
+    this.setCurrentScense(0);
+    this.emit("insert:images", urls);
   }
 
   // 设置当前显示ppt图片
-  public setCurrentScense(index: number):void {
+  public setCurrentScense(index: number): void {
     this.curImageIndex = index;
     this.setBackgroundImage(this.images[this.curImageIndex]);
-    this.emit('current:image', index)
+    this.emit("current:image", index);
   }
- 
+
   // 橡皮擦(IEraserBrushOptions)
   public eraser(options?: any): void {
     this.canvas.freeDrawingBrush = new fabric.EraserBrush(this.canvas, options);
-    this.canvas.freeDrawingBrush.width = 10
-    this.canvas.freeDrawingCursor = 'default'
+    this.canvas.freeDrawingBrush.width = 10;
+    this.canvas.freeDrawingCursor = "default";
     this.canvas.isDrawingMode = true;
+    // 删除单个对象或者一组对象
+    this.canvas.on("erasing:end", (options: any) => {
+      options.targets.forEach((obj: IObject) => obj.group?.removeWithUpdate(obj) || this.canvas.remove(obj));
+    });
+    this.canvas.renderAll();
   }
 
   // 初始化事件
@@ -408,7 +426,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         this.drawArrow(x, y, x, y);
         break;
       case "text":
-        this.drawText('', {left: x, top: y})
+        this.drawText("", { left: x, top: y });
         break;
       default:
         break;
@@ -433,34 +451,34 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         });
         break;
       case "triangle":
-          this.currentShape.set({
-            width,
-            height,
-          });
+        this.currentShape.set({
+          width,
+          height,
+        });
         break;
       case "circle":
-          const radius = Math.sqrt(width * width + height * height) / 2;
-          (this.currentShape as Circle).set({
-            radius,
-          });
+        const radius = Math.sqrt(width * width + height * height) / 2;
+        (this.currentShape as Circle).set({
+          radius,
+        });
         break;
       case "ellipse":
-          (this.currentShape as Ellipse).set({
-            rx: Math.abs(width / 2),
-            ry: Math.abs(height / 2),
-          });
+        (this.currentShape as Ellipse).set({
+          rx: Math.abs(width / 2),
+          ry: Math.abs(height / 2),
+        });
         break;
       case "line":
-          (this.currentShape as Line).set({
-            x2: x,
-            y2: y,
-          });
+        (this.currentShape as Line).set({
+          x2: x,
+          y2: y,
+        });
         break;
       case "arrow":
-          (this.currentShape as Arrow).set({
-            x2: x,
-            y2: y,
-          });
+        (this.currentShape as Arrow).set({
+          x2: x,
+          y2: y,
+        });
         break;
       default:
         break;
@@ -484,12 +502,12 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     return this.canvas.toJSON();
   }
 
-  public loadFromJSON(json: any, callback: Function, reviver?: Function): ICanvas{
-    return this.canvas.loadFromJSON(json, callback, reviver)
+  public loadFromJSON(json: any, callback: Function, reviver?: Function): ICanvas {
+    return this.canvas.loadFromJSON(json, callback, reviver);
   }
 
   public renderAll(): ICanvas {
-    return this.canvas.renderAll()
+    return this.canvas.renderAll();
   }
 
   /**
