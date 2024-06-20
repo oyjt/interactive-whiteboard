@@ -483,7 +483,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       default:
         break;
     }
-
+    // 更新边界信息
+    this.currentShape.setCoords();
+    // 重新渲染
     this.canvas.renderAll();
   }
 
