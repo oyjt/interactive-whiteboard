@@ -5,7 +5,7 @@
         <ToolBox></ToolBox>
       </div>
       <div class="redo-undo-box">
-          <RedoUndo></RedoUndo>
+        <RedoUndo></RedoUndo>
       </div>
       <div class="zoom-controller-box">
         <ZoomController></ZoomController>
@@ -13,19 +13,19 @@
       <div class="room-controller-box" v-show="!isPreviewShow">
         <div class="page-controller-mid-box">
           <div className="page-preview-cell" @click="insertPPT">
-              <img style="width: 28px" :src="folder" alt="文件"/>
+            <img style="width: 28px" :src="folder" alt="文件" />
           </div>
         </div>
       </div>
       <div class="page-controller-box" v-show="isShowPPTControl">
-          <div className="page-controller-mid-box">
-              <PageController></PageController>
-              <div className="page-preview-cell" @click="handlePreviewState(true)">
-                  <img :src="pages" alt="PPT预览"/>
-              </div>
+        <div className="page-controller-mid-box">
+          <PageController></PageController>
+          <div className="page-preview-cell" @click="handlePreviewState(true)">
+            <img :src="pages" alt="PPT预览" />
           </div>
+        </div>
       </div>
-      <div class="preview-controller-box" v-show="isShowPPTControl&&isPreviewShow">
+      <div class="preview-controller-box" v-show="isShowPPTControl && isPreviewShow">
         <PreviewController @handlePreviewState="handlePreviewState"></PreviewController>
       </div>
       <canvas id="canvas" width="800" height="450"></canvas>
@@ -37,8 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, provide, ref} from 'vue'
-import { fabric } from 'fabric';
+import { onMounted, provide, ref } from 'vue'
+import { StaticCanvas } from 'fabric';
 import FabricCanvas from './core'
 import ToolBox from './components/ToolBox/index.vue'
 import RedoUndo from './components/RedoUndo/index.vue'
@@ -61,17 +61,18 @@ function init() {
   canvas.value = canvas1;
 
   // 初始化画布2
-  const canvas2 = new fabric.StaticCanvas('canvas2');
+  const canvas2 = new StaticCanvas('canvas2');
 
-    // 画布重绘后同步到远程
+  // 画布重绘后同步到远程
   canvas1.on('after:render', () => {
     console.log(canvas1.toJSON());
     const compressedData = gzip(canvas1.toJSON());
     const text = uint8ArrayToBase64(compressedData);
     const data = base64ToUint8Array(text)
     const jsonData = ungzip(data);
-    canvas2?.loadFromJSON(jsonData, ()=>{
-      console.log('画布同步成功！');
+    canvas2.loadFromJSON(jsonData).then(() => {
+      canvas2.renderAll();
+      console.log('画布同步成功');
     });
   })
 }
@@ -85,7 +86,7 @@ function insertPPT() {
   // ppt图片资源
   const images = import.meta.glob('@/assets/ppt/*.jpeg', { eager: true, import: 'default' })
   const pptImage = Object.values(images)
-  canvas.value?.insertPPT(pptImage as string [])
+  canvas.value?.insertPPT(pptImage as string[])
   isShowPPTControl.value = true;
 }
 
@@ -165,6 +166,7 @@ onMounted(() => {
   cursor: pointer;
   background-color: white;
   border-radius: 2px;
+
   &:hover {
     background: rgba(33, 35, 36, 0.1);
   }

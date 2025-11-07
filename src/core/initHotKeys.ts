@@ -2,9 +2,8 @@
  * 快捷键功能
  */
 
-import { Canvas, Object } from 'fabric/fabric-impl';
+import { Canvas, FabricObject } from 'fabric/fabric-impl';
 import hotkeys from 'hotkeys-js';
-import FabricCanvas from './index';
 
 const keyNames = {
   lrdu: 'left,right,down,up', // 左右上下
@@ -15,21 +14,21 @@ const keyNames = {
   ctrlv: 'ctrl+v', // 粘贴
 };
 
-function copyElement(canvas:Canvas) {
-  let copyEl: Object | null = null;
+function copyElement(canvas: Canvas) {
+  let copyEl: FabricObject | null = null;
 
   // 复制
   hotkeys(keyNames.ctrlc, () => {
     const activeObject = canvas.getActiveObject();
     if (!activeObject) return;
-    activeObject.clone((_copyEl: Object) => {
+    activeObject.clone().then((_copyEl) => {
       canvas.discardActiveObject();
-      _copyEl.set({
-        left: (_copyEl.left as number) + 20,
-        top: (_copyEl.top as number) + 20,
-        evented: true,
-      });
-      copyEl = _copyEl;
+        _copyEl.set({
+          left: (_copyEl.left as number) + 20,
+          top: (_copyEl.top as number) + 20,
+          evented: true,
+        });
+        copyEl = _copyEl;
     });
   });
   // 粘贴
@@ -40,7 +39,7 @@ function copyElement(canvas:Canvas) {
   });
 }
 
-function initHotkeys(canvas: Canvas, fabricCanvas: FabricCanvas) {
+function initHotkeys(canvas: Canvas) {
   // 删除快捷键
   hotkeys(keyNames.backspace, () => {
     const activeObject = canvas.getActiveObjects();
@@ -57,16 +56,16 @@ function initHotkeys(canvas: Canvas, fabricCanvas: FabricCanvas) {
     if (activeObject) {
       switch (handler.key) {
         case 'left':
-          activeObject.set('left', (activeObject.left as number) - 1);
+          activeObject.set('left', activeObject.left - 1);
           break;
         case 'right':
-          activeObject.set('left', (activeObject.left as number) + 1);
+          activeObject.set('left', activeObject.left + 1);
           break;
         case 'down':
-          activeObject.set('top', (activeObject.top as number) + 1);
+          activeObject.set('top', activeObject.top + 1);
           break;
         case 'up':
-          activeObject.set('top', (activeObject.top as number) - 1);
+          activeObject.set('top', activeObject.top - 1);
           break;
         default:
       }

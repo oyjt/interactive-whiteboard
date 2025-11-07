@@ -1,7 +1,7 @@
 {
   "name": "interactive-whiteboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,24 +10,20 @@
     "build:deploy": "bash deploy.sh"
   },
   "dependencies": {
-    "canvas": "^2.11.0",
-    "fabric": "^5.3.0",
-    "fabric-history": "^1.6.0",
+    "@erase2d/fabric": "^1.1.8",
+    "fabric": "^6.7.1",
     "hotkeys-js": "^3.10.1",
     "mitt": "^3.0.0",
     "pako": "^2.1.0",
-    "uuid": "^9.0.0",
     "vue": "^3.2.47"
   },
   "devDependencies": {
-    "@types/fabric": "^5.3.0",
     "@types/node": "^18.15.11",
     "@types/pako": "^2.0.0",
-    "@types/uuid": "^9.0.1",
     "@vitejs/plugin-vue": "^4.1.0",
     "sass": "^1.60.0",
     "typescript": "^5.0.2",
-    "vite": "^4.2.1",
+    "vite": "^7.2.1",
     "vite-svg-loader": "^4.0.0",
     "vue-tsc": "^1.2.0"
   }

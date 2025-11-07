@@ -29,17 +29,7 @@
 pnpm install
 ``` 
 
-2. 进入`node_modules/fabric`执行下面的命令
-```
-node build.js modules=ALL exclude=gestures,accessors requirejs minifier=uglifyjs
-```
-
-> 温馨提示：执行以上命令，需要全局安装`uglifyjs`，安装命令如下：
->```
->npm install uglifyjs -g
->```
-
-3. 运行项目
+2. 运行项目
 ```
 pnpm dev
 ```

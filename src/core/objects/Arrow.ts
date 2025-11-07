@@ -1,46 +1,29 @@
-/*
- * @Author: 秦少卫
- * @Date: 2023-01-07 01:15:50
- * @LastEditors: 秦少卫
- * @LastEditTime: 2023-02-08 00:08:40
- * @Description: 箭头元素
- */
-import { fabric } from 'fabric';
+import { Line } from 'fabric';
 
-fabric.Arrow = fabric.util.createClass(fabric.Line, {
-  type: 'arrow',
-  superType: 'drawing',
-  initialize(points: number[], options: any) {
-    if (!points) {
-      const { x1, x2, y1, y2 } = options;
-      points = [x1, y1, x2, y2];
-    }
-    options = options || {};
-    this.callSuper('initialize', points, options);
-  },
-  _render(ctx: any) {
-    this.callSuper('_render', ctx);
+class Arrow extends Line {
+  _render(ctx: CanvasRenderingContext2D) {
+    super._render(ctx)
+
     ctx.save();
-    const xDiff = this.x2 - this.x1;
-    const yDiff = this.y2 - this.y1;
+    // 乘或除对应的scaleX(Y)，抵消元素放缩造成的影响，使箭头不会变形
+    ctx.scale(1 / this.scaleX, 1 / this.scaleY);
+    const xDiff = (this.x2 - this.x1) * this.scaleX;
+    const yDiff = (this.y2 - this.y1) * this.scaleY;
     const angle = Math.atan2(yDiff, xDiff);
-    ctx.translate((this.x2 - this.x1) / 2, (this.y2 - this.y1) / 2);
+    ctx.translate(((this.x2 - this.x1) / 2) * this.scaleX, ((this.y2 - this.y1) / 2) * this.scaleY);
     ctx.rotate(angle);
     ctx.beginPath();
-    // Move 5px in front of line to start the arrow so it does not have the square line end showing in front (0,0)
-    ctx.moveTo(5, 0);
-    ctx.lineTo(-5, 5);
-    ctx.lineTo(-5, -5);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, 5);
+    ctx.lineTo(-10, -5);
     ctx.closePath();
-    ctx.fillStyle = this.stroke;
+    ctx.lineWidth = this.strokeWidth ;
+    ctx.strokeStyle = this.stroke as string;
+    ctx.fillStyle = this.fill as string;
+    ctx.stroke();
     ctx.fill();
     ctx.restore();
-  },
-});
-
-fabric.Arrow.fromObject = (options: any, callback: any) => {
-  const { x1, x2, y1, y2 } = options;
-  return callback(new fabric.Arrow([x1, y1, x2, y2], options));
+  }
 };
 
-export default fabric.Arrow;
+export default Arrow;
