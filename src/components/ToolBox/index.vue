@@ -15,7 +15,7 @@
     </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, Ref } from 'vue'
+import { inject, onMounted, ref, Ref } from 'vue'
 import FabricCanvas, { DrawingTool } from '@/core'
 import selector from "./image/selector.svg";
 import selectorActive from "./image/selector-active.svg";
@@ -92,7 +92,7 @@ const tools = ref<Appliance[]>([{
     shapeType: "arrow",
 }])
 
-const currentShapType = ref<string>("pencil")
+const currentShapType = ref<string>("pencil");
 
 function clickAppliance(type: DrawingTool) {
     currentShapType.value = type;

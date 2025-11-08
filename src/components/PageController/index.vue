@@ -36,7 +36,7 @@ const scenes = ref<string[]>([]);
 // 图片渲染
 function renderImg() {
   canvas?.value.clearCanvas();
-  canvas?.value.setCurrentScense(activeIndex.value);
+  canvas?.value.setCurrentScene(activeIndex.value);
 }
 
 function handlePptPreviousStep() {
