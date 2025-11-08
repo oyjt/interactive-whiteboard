@@ -1,6 +1,6 @@
 # 互动白板
 
-使用`vite`+`vue3`+`typescript`+`fabric`创建的互动白板项目
+使用`vite`+`vue3`+`typescript`+`fabric 6.0`创建的互动白板项目
 
 ![](/example/demo.png)
 

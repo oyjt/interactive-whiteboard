@@ -4,7 +4,7 @@ import Arrow from "./objects/Arrow";
 import initHotKeys from "./initHotKeys";
 import initControls from "./initControls";
 import initControlsRotate from "./initControlsRotate";
-import { ClippingGroup, EraserBrush } from "@erase2d/fabric";
+import { EraserBrush } from "@erase2d/fabric";
 /**
  * fabri方法封装
  * 使用示例：
@@ -277,12 +277,10 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.add(textObj);
     this.canvas.defaultCursor = "text";
     this.currentShape = textObj;
-    // 文本打开编辑模式
-    textObj.enterEditing();
-    textObj.exitEditing();
-    // 文本编辑框获取焦点
-    textObj.hiddenTextarea?.focus();
+
+    // 激活对象并直接进入编辑模式
     this.setActiveObject(textObj);
+    textObj.enterEditing();
   }
 
   // 插入图片
@@ -424,18 +422,24 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
 
     const { x, y } = event.pointer;
+    const left = Math.min(x, this.startX);
+    const top = Math.min(y, this.startY);
     const width = Math.abs(x - this.startX);
     const height = Math.abs(y - this.startY);
 
     switch (this.drawingTool) {
       case "rectangle":
         this.currentShape.set({
+          left,
+          top,
           width,
           height,
         });
         break;
       case "triangle":
         this.currentShape.set({
+          left,
+          top,
           width,
           height,
         });
@@ -443,11 +447,15 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       case "circle":
         const radius = Math.sqrt(width * width + height * height) / 2;
         (this.currentShape as Circle).set({
+          left,
+          top,
           radius,
         });
         break;
       case "ellipse":
         (this.currentShape as Ellipse).set({
+          left,
+          top,
           rx: Math.abs(width / 2),
           ry: Math.abs(height / 2),
         });
