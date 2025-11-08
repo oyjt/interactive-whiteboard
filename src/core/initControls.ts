@@ -199,7 +199,7 @@ function initControls(canvas: Canvas) {
       mt: mtControl,
       // 旋转
       mtr: mtrControl,
-      // 删除 (使用你原来的键名 'deleteControl')
+      // 删除
       deleteControl: deleteControlInstance,
     },
   }

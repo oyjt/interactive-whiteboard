@@ -112,7 +112,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     super();
 
     this.canvas = new Canvas(canvasId, {
-      isDrawingMode: false,
+      isDrawingMode: true,
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
@@ -140,7 +140,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 设置画布背景颜色
   public setBackgroundColor(color: string): void {
     this.canvas.backgroundColor = color;
-    this.canvas.renderAll();
+    this.canvas.requestRenderAll();
   }
 
   // 设置画布背景图片（居中显示）
@@ -168,7 +168,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       });
   
       this.canvas.backgroundImage = img;
-      this.canvas.renderAll();
+      this.canvas.requestRenderAll();
     })
   }
 
@@ -227,6 +227,12 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     } else if (tool === "select") {
       this.canvas.selection = true;
       this.canvas.defaultCursor = "auto";
+    } else if(tool === "text") {
+      // 退出文本编辑模式
+      const activeObject = this.canvas.getActiveObject();
+      if (activeObject instanceof IText && activeObject.isEditing) {
+        activeObject.exitEditing();
+      }
     } else {
       this.canvas.defaultCursor = "crosshair";
     }
@@ -301,8 +307,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.add(textObj);
     this.canvas.defaultCursor = "text";
     // 激活对象并直接进入编辑模式
-    this.setActiveObject(textObj);
-    textObj.enterEditing();
+    // this.setActiveObject(textObj);
+    // textObj.enterEditing();
     // 记录当前正在编辑的对象
     this.currentShape = textObj;
   }
@@ -408,35 +414,16 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
     switch (this.drawingTool) {
       case "rectangle":
-        this.drawRect({
-          left: x,
-          top: y,
-          width: 0,
-          height: 0,
-        });
+        this.drawRect({ left: x, top: y, width: 0, height: 0 });
         break;
       case "triangle":
-        this.drawTriangle({
-          left: x,
-          top: y,
-          width: 0,
-          height: 0,
-        });
+        this.drawTriangle({ left: x, top: y, width: 0, height: 0 });
         break;
       case "circle":
-        this.drawCircle({
-          left: x,
-          top: y,
-          radius: 0,
-        });
+        this.drawCircle({ left: x, top: y, radius: 0 });
         break;
       case "ellipse":
-        this.drawEllipse({
-          left: x,
-          top: y,
-          rx: 0,
-          ry: 0,
-        });
+        this.drawEllipse({ left: x, top: y, rx: 0, ry: 0 });
         break;
       case "line":
         this.drawLine(x, y, x, y);
@@ -445,7 +432,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         this.drawArrow(x, y, x, y);
         break;
       case "text":
-        this.drawText("", { left: x, top: y });
+        this.drawText("", { left: x, top: y, width: 0, height: 0 });
         break;
       default:
         break;
@@ -466,40 +453,21 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     switch (this.drawingTool) {
       case "rectangle":
       case "triangle":
-        this.currentShape.set({
-          left,
-          top,
-          width,
-          height,
-        });
+        this.currentShape.set({ left, top, width, height });
         break;
       case "circle":
         const radius = Math.sqrt(width * width + height * height) / 2;
-        (this.currentShape as Circle).set({
-          left,
-          top,
-          radius,
-        });
+        this.currentShape.set({ left, top, radius });
         break;
       case "ellipse":
-        (this.currentShape as Ellipse).set({
-          left,
-          top,
-          rx: Math.abs(width / 2),
-          ry: Math.abs(height / 2),
-        });
+        this.currentShape.set({ left, top, rx: Math.abs(width / 2), ry: Math.abs(height / 2) });
         break;
       case "line":
-        (this.currentShape as Line).set({
-          x2: x,
-          y2: y,
-        });
-        break;
       case "arrow":
-        (this.currentShape as Arrow).set({
-          x2: x,
-          y2: y,
-        });
+        this.currentShape.set({ x2: x, y2: y });
+        break;
+      case "text":
+        this.currentShape.set({ left, top, width, height });
         break;
       default:
         break;
@@ -507,11 +475,21 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     // 更新边界信息
     this.currentShape.setCoords();
     // 重新渲染
-    this.canvas.renderAll();
+    this.canvas.requestRenderAll();
   }
 
   // 鼠标抬起事件处理函数
   private onMouseUp() {
+    // 文本工具拖拽结束处理
+    if (this.currentShape && this.drawingTool === "text") {
+      // 如果只是点击（拖拽很小）给一个默认大小
+      if (this.currentShape.width < 10 && this.currentShape.height < 10) {
+        this.currentShape.set({ width: 100, height: 28 }); // 默认大小
+      }
+      this.canvas.setActiveObject(this.currentShape);
+      (this.currentShape as IText).enterEditing();
+    }
+
     this.isDrawing = false;
     this.currentShape = null;
     this.emit("mouse:up", null);
@@ -526,6 +504,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   public loadFromJSON(json: any, callback?: () => void): void {
+    if (!json) return;
     this.canvas.loadFromJSON(json).then(() => {
       this.canvas.requestRenderAll();
       if (typeof callback === "function") callback();

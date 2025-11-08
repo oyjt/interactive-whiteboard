@@ -8,6 +8,8 @@ import {
   InteractiveFabricObject,
   TPointerEvent,
   Canvas,
+  BasicTransformEvent,
+  FabricObject,
 } from 'fabric';
 
 /**
@@ -41,7 +43,7 @@ function createRotationCursorHandler(angleOffset: number) {
 function initControlsRotate(canvas: Canvas) {
   
   // ↖左上
-  const mtrControl = new Control({
+  const mtr1Control = new Control({
     x: -0.5,
     y: -0.5,
     offsetY: -10,
@@ -92,13 +94,13 @@ function initControlsRotate(canvas: Canvas) {
   const controls = InteractiveFabricObject.ownDefaults.controls;
   InteractiveFabricObject.ownDefaults.controls = {
     ...controls,
-    mtr: mtrControl,
+    mtr1: mtr1Control,
     mtr2: mtr2Control,
     mtr3: mtr3Control,
     mtr4: mtr4Control,
   };
 
-  canvas.on('object:rotating', (event) => {
+  canvas.on('object:rotating', (event: BasicTransformEvent<TPointerEvent> & { target: FabricObject }) => {
     // 确保有 activeObject 和 transform
     const activeObject = event.target;
     const transform = event.transform;
@@ -114,7 +116,7 @@ function initControlsRotate(canvas: Canvas) {
 
     // 根据被拖动的角，更新上层画布的光标
     switch (transform.corner) {
-      case 'mtr':
+      case 'mtr1':
         upperCanvas.style.cursor = rotateIcon(activeObject.angle);
         break;
       case 'mtr2':
