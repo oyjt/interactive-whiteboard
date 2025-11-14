@@ -53,7 +53,7 @@ function handlePreviewState(state: boolean) {
 }
 
 function setScenePath(index: number) {
-    canvas?.value.setCurrentScense(index)
+    canvas?.value.setCurrentScene(index)
 }
 
 function removeScenes(index: number) {
