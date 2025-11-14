@@ -25,7 +25,7 @@ jobs:
       - name: 设置 Node
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: 缓存 pnpm store
