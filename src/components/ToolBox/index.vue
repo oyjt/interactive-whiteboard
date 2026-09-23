@@ -38,7 +38,7 @@ const settingsOpen = ref(false);
 const busy = ref(false);
 const toolbarRoot = ref<HTMLElement | null>(null);
 function hasSettings(type: DrawingTool) {
-  return type === 'pencil' || type === 'line' || type === 'arrow' ||
+  return type === 'pencil' || type === 'text' || type === 'line' || type === 'arrow' ||
     type === 'rectangle' || type === 'circle' || type === 'triangle' || type === 'ellipse';
 }
 function updateSettings(value: BrushOptions) { canvas?.value?.setBrushSettings(value); }

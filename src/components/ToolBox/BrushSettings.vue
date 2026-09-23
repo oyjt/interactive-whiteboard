@@ -2,15 +2,18 @@
   <section class="brush-settings" :aria-label="`${toolName}设置`">
     <div class="settings-title">{{ toolName }}设置</div>
     <label class="size-label" :for="sliderId">
-      {{ tool === 'pencil' ? '画笔尺寸' : '线宽' }} <output>{{ model.width }} px</output>
+      {{ tool === 'text' ? '文字大小' : tool === 'pencil' ? '画笔尺寸' : '线宽' }}
+      <output>{{ tool === 'text' ? model.fontSize : model.width }} px</output>
     </label>
-    <input :id="sliderId" type="range" min="1" max="40" step="1"
-      :value="model.width" @input="updateSize(Number(($event.target as HTMLInputElement).value))" />
+    <input :id="sliderId" type="range" :min="tool === 'text' ? 12 : 1" :max="tool === 'text' ? 96 : 40" step="1"
+      :value="tool === 'text' ? model.fontSize : model.width"
+      @input="updateSize(Number(($event.target as HTMLInputElement).value))" />
     <div class="size-presets">
-      <button v-for="width in [2, 5, 10, 20]" :key="width"
-        type="button" :aria-pressed="model.width === width" @click="updateSize(width)">{{ width }}</button>
+      <button v-for="size in (tool === 'text' ? [16, 24, 32, 48] : [2, 5, 10, 20])" :key="size"
+        type="button" :aria-pressed="(tool === 'text' ? model.fontSize : model.width) === size"
+        @click="updateSize(size)">{{ size }}</button>
     </div>
-    <div class="color-label">{{ tool === 'pencil' ? '画笔颜色' : '线条颜色' }} <span>{{ model.color.toUpperCase() }}</span></div>
+    <div class="color-label">{{ tool === 'text' ? '文字颜色' : tool === 'pencil' ? '画笔颜色' : '线条颜色' }} <span>{{ model.color.toUpperCase() }}</span></div>
     <div class="color-presets">
       <button v-for="color in colors" :key="color" type="button" :aria-label="`选择颜色 ${color}`"
         :aria-pressed="model.color === color" :style="{ backgroundColor: color }" @click="updateColor(color)">
@@ -20,12 +23,13 @@
         @input="updateColor(($event.target as HTMLInputElement).value)" /></label>
     </div>
     <div class="stroke-preview" :aria-label="`${toolName}预览`">
-      <svg viewBox="0 0 180 60" role="img" aria-label="当前颜色和粗细">
+      <span v-if="tool === 'text'" :style="{ color: model.color, fontSize: `${model.fontSize}px` }">文字 Aa</span>
+      <svg v-else viewBox="0 0 180 60" role="img" aria-label="当前颜色和粗细">
         <path :d="tool === 'pencil' ? 'M25 35 Q55 10 90 30 T155 25' : 'M25 30 L155 30'"
           fill="none" :stroke="model.color" :stroke-width="model.width" stroke-linecap="round" />
       </svg>
     </div>
-    <p>{{ tool === 'pencil' ? '应用于下一笔' : '应用于新绘制的图形' }}，已有内容不变</p>
+    <p>{{ tool === 'text' ? '点击输入；拖动可指定换行宽度' : tool === 'pencil' ? '应用于下一笔，已有内容不变' : '应用于新绘制的图形，已有内容不变' }}</p>
   </section>
 </template>
 <script setup lang="ts">
@@ -37,12 +41,12 @@ const props = defineProps<{ tool: DrawingTool }>();
 const sliderId = useId();
 const colors = ['#111827', '#ffffff', '#ff0000', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7'];
 const names: Partial<Record<DrawingTool, string>> = {
-  pencil: '画笔', line: '直线', arrow: '箭头', rectangle: '矩形',
+  pencil: '画笔', text: '文字', line: '直线', arrow: '箭头', rectangle: '矩形',
   circle: '圆形', ellipse: '椭圆', triangle: '三角形',
 };
 const toolName = computed(() => names[props.tool] ?? '线条');
 function updateSize(width: number) {
-  model.value = { ...model.value, width };
+  model.value = { ...model.value, [props.tool === 'text' ? 'fontSize' : 'width']: width };
 }
 function updateColor(color: string) { model.value = { ...model.value, color }; }
 </script>

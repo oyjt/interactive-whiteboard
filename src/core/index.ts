@@ -14,6 +14,7 @@ import {
   PencilBrush,
   IText,
   ITextProps,
+  Textbox,
   TOptions,
   TDataUrlOptions,
   Point,
@@ -28,7 +29,6 @@ import Arrow from "./objects/Arrow";
 import initHotKeys from "./initHotKeys";
 import initControls from "./initControls";
 import initControlsRotate from "./initControlsRotate";
-import { EraserBrush } from "@erase2d/fabric";
 /**
  * fabri方法封装
  * 使用示例：
@@ -103,6 +103,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private isDrawing = false;
   private startX = 0;
   private startY = 0;
+  private textPreview?: HTMLDivElement;
+  private textDrag = false;
+  private pendingText: IText | Textbox | null = null;
+  private erasing = false;
+  private erasureTargets = new Map<FabricObject, Pick<FabricObject, 'opacity' | 'stroke' | 'fill'>>();
   private options: ShapeOptions = {
     stroke: "#ff0000",
     strokeWidth: 5,
@@ -158,7 +163,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   public commit() {
     clearTimeout(this.commitTimer);
-    if (this.busy || this.disposed || this.isDrawing) return;
+    if (this.busy || this.disposed || this.isDrawing || this.pendingText || this.erasing) return;
     if (this.history.push(JSON.stringify(this.toJSON()))) {
       this.publishHistory();
       this.emit("content:changed", this.toJSON());
@@ -317,12 +322,19 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 切换绘制工具
   public setDrawingTool(tool: DrawingTool) {
     if (this.busy || this.drawingTool === tool) return;
+    this.finishErasing(false);
+    this.clearTextPreview();
+    if (this.drawingTool === 'text' && this.isDrawing) {
+      this.isDrawing = false;
+      this.textDrag = false;
+    }
     this.finishEditing();
     this.canvas.discardActiveObject();
 
     // 关闭画布的 isDrawingMode，以及清理自由画笔 state
     this.canvas.isDrawingMode = false;
     this.canvas.selection = false;
+    this.canvas.skipTargetFind = tool === 'eraser' || tool === 'text';
     this.canvas.defaultCursor = "default";
 
     this.drawingTool = tool;
@@ -330,7 +342,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     if (tool === "pencil") {
       this.drawFreeDraw();
     } else if (tool === "eraser") {
-      this.eraser();
+      this.canvas.defaultCursor = "crosshair";
     } else if (tool === "select") {
       this.canvas.selection = true;
       this.canvas.defaultCursor = "auto";
@@ -408,16 +420,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       fill: this.options.stroke,
       editingBorderColor: this.options.stroke,
       erasable: this.options.erasable,
-      fontSize: 18,
-      padding: 5,
+      fontSize: this.settings.fontSize,
       ...options,
     });
     this.canvas.add(textObj);
     this.canvas.defaultCursor = "text";
-    // 激活对象并直接进入编辑模式
-    // this.setActiveObject(textObj);
-    // textObj.enterEditing();
-    // 记录当前正在编辑的对象
     this.currentShape = textObj;
   }
 
@@ -507,26 +514,49 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.emit("current:image", this.curImageIndex);
   }
 
-  /** 橡皮擦（使用 @erase2d/fabric EraserBrush） */
-  public eraser(options?: { width?: number }): void {
-    const eraser = new EraserBrush(this.canvas);
-    if (options?.width) eraser.width = options.width;
-    else eraser.width = 20;
+  private markErasure(point: Point) {
+    let changed = false;
+    for (const object of this.canvas.getObjects()) {
+      if (!(object as FabricObject & { erasable?: boolean }).erasable || this.erasureTargets.has(object)) continue;
+      const { left, top, width, height } = object.getBoundingRect();
+      if (point.x < left - 10 || point.x > left + width + 10 ||
+        point.y < top - 10 || point.y > top + height + 10) continue;
+      if (object instanceof Line) {
+        const { x1, y1, x2, y2 } = object.calcLinePoints();
+        const [a, b, c, d, e, f] = object.calcTransformMatrix();
+        const start = new Point(a * x1 + c * y1 + e, b * x1 + d * y1 + f);
+        const end = new Point(a * x2 + c * y2 + e, b * x2 + d * y2 + f);
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const ratio = Math.max(0, Math.min(1,
+          ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy || 1)));
+        if (Math.hypot(point.x - start.x - ratio * dx, point.y - start.y - ratio * dy) >
+          10 + object.strokeWidth / 2) continue;
+      }
+      this.erasureTargets.set(object, { opacity: object.opacity, stroke: object.stroke, fill: object.fill });
+      object.set({
+        opacity: object instanceof FabricImage ? 0.35 : 0.55,
+        stroke: object.stroke ? '#6b7280' : object.stroke,
+        fill: object instanceof FabricImage || object.fill === 'transparent' || !object.fill ?
+          object.fill : '#6b7280',
+      });
+      object.dirty = true;
+      changed = true;
+    }
+    if (changed) this.canvas.requestRenderAll();
+  }
 
-    this.canvas.freeDrawingBrush = eraser;
-    this.canvas.freeDrawingCursor = "default";
-    this.canvas.isDrawingMode = true;
-
-     eraser.on('end', async (e) => {
-      e.preventDefault();
-      // 删除
-      // eraser.commit(e.detail);
-      // 删除单个对象或者一组对象
-      const targets = e.detail.targets;
-      targets.forEach((obj: FabricObject) => obj.group?.remove(obj) || this.canvas.remove(obj));
-      this.canvas.requestRenderAll();
-      this.scheduleCommit();
-    });
+  private finishErasing(remove: boolean) {
+    if (!this.erasing) return;
+    this.erasing = false;
+    for (const [object, appearance] of this.erasureTargets) {
+      object.set(appearance);
+      object.dirty = true;
+      if (remove) object.group?.remove(object) || this.canvas.remove(object);
+    }
+    this.erasureTargets.clear();
+    this.canvas.requestRenderAll();
+    if (remove) this.scheduleCommit();
   }
 
   // 初始化事件
@@ -535,7 +565,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.on("object:removed", () => this.scheduleCommit());
     this.canvas.on("object:modified", () => this.scheduleCommit());
     this.canvas.on("path:created", () => this.scheduleCommit());
-    this.canvas.on("text:editing:exited", () => this.scheduleCommit());
+    this.canvas.on("text:editing:exited", (event: { target: IText | Textbox }) => {
+      event.target.set({ hasControls: true, hasBorders: true });
+      if (event.target === this.pendingText) {
+        this.pendingText = null;
+        if (!event.target.text.trim()) this.canvas.remove(event.target);
+      }
+      this.scheduleCommit();
+    });
     // 绑定添加对象事件，将当前画布状态保存到撤销栈中
     this.canvas.on("object:added", (e: { target: FabricObject }) => {
       this.emit("object:added", e);
@@ -565,15 +602,67 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.on("mouse:down", this.onMouseDown.bind(this));
     this.canvas.on("mouse:move", this.onMouseMove.bind(this));
     this.canvas.on("mouse:up", this.onMouseUp.bind(this));
+    window.addEventListener('pointerup', (event) => {
+      this.finishErasing(true);
+      if (this.isDrawing && this.drawingTool === 'text') {
+        this.onMouseUp({ pointer: this.canvas.getScenePoint(event) });
+      }
+    }, { signal: this.abortController.signal });
+  }
+
+  private clearTextPreview() {
+    this.textPreview?.remove();
+    this.textPreview = undefined;
+  }
+
+  private updateTextPreview(event: any) {
+    const { x, y } = event.pointer;
+    if (!this.textDrag && Math.hypot(x - this.startX, y - this.startY) < 6) return;
+    this.textDrag = true;
+    if (!this.textPreview) {
+      this.textPreview = document.createElement('div');
+      this.textPreview.className = 'text-drag-preview';
+      Object.assign(this.textPreview.style, {
+        position: 'absolute', border: '1px dashed #2563eb', background: '#2563eb0a',
+        boxSizing: 'border-box', pointerEvents: 'none', zIndex: '4',
+      });
+      this.canvas.wrapperEl.append(this.textPreview);
+    }
+    const [a, b, c, d, e, f] = this.canvas.viewportTransform;
+    const start = new Point(a * this.startX + c * this.startY + e, b * this.startX + d * this.startY + f);
+    const end = this.canvas.getViewportPoint(event.e);
+    Object.assign(this.textPreview.style, {
+      left: `${Math.min(start.x, end.x)}px`, top: `${Math.min(start.y, end.y)}px`,
+      width: `${Math.abs(end.x - start.x)}px`, height: `${Math.abs(end.y - start.y)}px`,
+    });
+  }
+
+  private startTextEditing(x: number, y: number, width?: number) {
+    const options = {
+      left: x, top: y, fill: this.settings.color, fontSize: this.settings.fontSize,
+      erasable: true, hasBorders: false, hasControls: false, padding: 0,
+      editingBorderColor: 'transparent',
+    };
+    const text = width === undefined ? new IText('', options) :
+      new Textbox('', { ...options, width, splitByGrapheme: true });
+    this.pendingText = text;
+    this.canvas.add(text);
+    this.canvas.setActiveObject(text);
+    text.enterEditing();
+    this.canvas.requestRenderAll();
   }
 
   // 鼠标按下事件处理函数
   private onMouseDown(event: any) {
-    // 如果当前有活动的元素则不添加
-    const activeObject = this.canvas.getActiveObject();
-    if (!event.pointer || activeObject) return;
-
+    if (!event.pointer) return;
     const { x, y } = event.pointer;
+    if (this.drawingTool === 'eraser') {
+      this.erasing = true;
+      this.markErasure(new Point(x, y));
+      return;
+    }
+    // 如果当前有活动的元素则不添加
+    if (this.canvas.getActiveObject()) return;
     this.isDrawing = true;
     this.startX = x;
     this.startY = y;
@@ -598,7 +687,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         this.drawArrow(x, y, x, y);
         break;
       case "text":
-        this.drawText("", { left: x, top: y, width: 0, height: 0 });
+        this.textDrag = false;
         break;
       default:
         break;
@@ -607,6 +696,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 鼠标移动事件处理函数
   private onMouseMove(event: any) {
+    if (this.erasing && event.pointer) {
+      this.markErasure(new Point(event.pointer.x, event.pointer.y));
+      return;
+    }
+    if (this.isDrawing && this.drawingTool === 'text' && event.pointer) {
+      this.updateTextPreview(event);
+      return;
+    }
     if (!this.isDrawing || !event.pointer || !this.currentShape) return;
 
     const { x, y } = event.pointer;
@@ -632,9 +729,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       case "arrow":
         this.currentShape.set({ x2: x, y2: y });
         break;
-      case "text":
-        this.currentShape.set({ left, top, width, height });
-        break;
       default:
         break;
     }
@@ -645,17 +739,22 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   // 鼠标抬起事件处理函数
-  private onMouseUp() {
-    // 文本工具拖拽结束处理
-    if (this.currentShape && this.drawingTool === "text") {
-      // 如果只是点击（拖拽很小）给一个默认大小
-      if (this.currentShape.width < 10 && this.currentShape.height < 10) {
-        this.currentShape.set({ width: 100, height: 28 }); // 默认大小
-      }
-      this.canvas.setActiveObject(this.currentShape);
-      (this.currentShape as IText).enterEditing();
-    }
-
+  private onMouseUp(event: any) {
+    if (this.erasing) {
+      this.finishErasing(true);
+      return;
+    }
+    if (this.isDrawing && this.drawingTool === 'text') {
+      const x = event.pointer?.x ?? this.startX;
+      const y = event.pointer?.y ?? this.startY;
+      this.clearTextPreview();
+      this.isDrawing = false;
+      this.startTextEditing(this.textDrag ? Math.min(x, this.startX) : this.startX,
+        this.textDrag ? Math.min(y, this.startY) : this.startY,
+        this.textDrag ? Math.max(30, Math.abs(x - this.startX)) : undefined);
+      this.textDrag = false;
+      return;
+    }
     this.isDrawing = false;
     this.currentShape = null;
     this.emit("mouse:up", null);
@@ -711,6 +810,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 销毁事件监听
   public async destroy() {
+    this.clearTextPreview();
+    this.finishErasing(false);
     this.disposed = true;
     this.abortController.abort();
     clearTimeout(this.commitTimer);

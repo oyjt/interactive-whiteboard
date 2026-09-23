@@ -59,11 +59,11 @@ assert.equal(await page.getByRole('button',{name:'橡皮擦',exact:true}).getAtt
 assert.equal(await page.getByRole('region',{name:'橡皮擦设置'}).count(),0);
 await page.getByRole('button',{name:'橡皮擦',exact:true}).click();
 assert.equal(await page.locator('.brush-settings').count(),0);
-assert.equal(await board(b=>b.getCanvas().freeDrawingBrush.width),20);
+assert.equal(await board(b=>b.getCanvas().isDrawingMode),false);
 await page.getByRole('button',{name:'笔',exact:true}).click();
 assert.equal(await board(b=>b.getCanvas().freeDrawingBrush.width),10);
 await page.reload();await page.waitForSelector('.upper-canvas');
-assert.deepEqual(await board(b=>b.getBrushSettings()),{color:'#3b82f6',width:10});
+assert.deepEqual(await board(b=>b.getBrushSettings()),{color:'#3b82f6',width:10,fontSize:24});
 console.log('PASS fixed eraser width and stroke settings persistence');
 for (const name of ['直线','箭头','矩形','圆形','三角形']) {
   await page.getByRole('button',{name,exact:true}).click();
@@ -80,8 +80,49 @@ for (const name of ['直线','箭头','矩形','圆形','三角形']) {
   await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
 }
 console.log('PASS line, arrow and shape color/width settings');
+await page.getByRole('button',{name:'文本',exact:true}).click();
+await page.getByRole('region',{name:'文字设置'}).getByRole('button',{name:'32',exact:true}).click();
+await page.getByRole('region',{name:'文字设置'}).getByRole('button',{name:'选择颜色 #22c55e'}).click();
+await page.reload();await page.waitForSelector('.upper-canvas');
+assert.deepEqual(await board(b=>b.getBrushSettings()),{color:'#22c55e',width:5,fontSize:32});
+await page.getByRole('button',{name:'文本',exact:true}).click();
+let canvasBox=await page.locator('.upper-canvas').boundingBox();
+await page.mouse.click(canvasBox.x+400,canvasBox.y+120);
+await count(1);
+assert.deepEqual(await board(b=>({editing:b.getObjects()[0].isEditing,borders:b.getObjects()[0].hasBorders,
+  controls:b.getObjects()[0].hasControls,color:b.getObjects()[0].fill,fontSize:b.getObjects()[0].fontSize,
+  type:b.getObjects()[0].constructor.type})),
+  {editing:true,borders:false,controls:false,color:'#22c55e',fontSize:32,type:'IText'});
+assert.equal(await page.locator('.text-drag-preview').count(),0);
+await board(b=>b.setDrawingTool('select'));await count(0);await idle();
+assert.equal(await page.getByRole('button',{name:'撤销',exact:true}).isDisabled(),true);
+await page.getByRole('button',{name:'文本',exact:true}).click();
+await page.mouse.click(canvasBox.x+400,canvasBox.y+120);
+await page.keyboard.type('单击输入文字');
+await board(b=>b.setDrawingTool('select'));await count(1);await idle();
+assert.equal(await board(b=>b.getObjects()[0].text),'单击输入文字');
+await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
+await page.getByRole('button',{name:'文本',exact:true}).click();
+canvasBox=await page.locator('.upper-canvas').boundingBox();
+await page.mouse.move(canvasBox.x+350,canvasBox.y+250);await page.mouse.down();
+await page.mouse.move(canvasBox.x+530,canvasBox.y+315,{steps:8});
+assert.equal(await page.locator('.text-drag-preview').count(),1);
+assert.equal(await board(b=>b.getObjects().length),0);
+assert.ok((await page.locator('.text-drag-preview').boundingBox()).width>=170);
+await page.mouse.up();await count(1);
+assert.deepEqual(await board(b=>({type:b.getObjects()[0].constructor.type,editing:b.getObjects()[0].isEditing,
+  width:Math.round(b.getObjects()[0].width),borders:b.getObjects()[0].hasBorders})),
+  {type:'Textbox',editing:true,width:180,borders:false});
+assert.equal(await page.locator('.text-drag-preview').count(),0);
+await page.keyboard.type('Wrap this text inside the dragged region.');
+assert.ok(await board(b=>b.getObjects()[0].textLines.length>1));
+await board(b=>b.setDrawingTool('select'));await idle();
+await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
+console.log('PASS borderless click text, drag-only dashed region, wrapping and empty cleanup');
 await page.getByRole('button',{name:'箭头',exact:true}).click();
 await draw(400,150);await count(1);
+const arrowPixels=await board(b=>[[523,180],[524,175]].map(([x,y])=>b.getCanvas().lowerCanvasEl.getContext('2d').getImageData(x,y,1,1).data[3]));
+assert.ok(arrowPixels[0]<40 && arrowPixels[1]>128,'箭头尖应是开放的两条线，不含三角形底边');
 assert.equal(await board(b=>b.getObjects()[0].constructor.type),'Arrow');
 await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects()[0]?.constructor.type==='Arrow');
 await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
@@ -90,8 +131,19 @@ assert.equal(await board(b=>b.getObjects()[0].constructor.type),'Arrow');
 assert.equal(await board(b=>b.getObjects()[0].erasable),true);
 console.log('PASS arrow and erasable serialization in history and mirror');
 await page.getByRole('button',{name:'橡皮擦',exact:true}).click();
-await draw(400,150);await count(0);
+canvasBox=await page.locator('.upper-canvas').boundingBox();
+await page.mouse.move(canvasBox.x+405,canvasBox.y+185);await page.mouse.down();
+assert.equal(await board(b=>b.getObjects()[0].opacity),1);
+await page.mouse.up();assert.equal(await board(b=>b.getObjects().length),1);
+await page.mouse.move(canvasBox.x+405,canvasBox.y+152);await page.mouse.down();
+await page.mouse.move(canvasBox.x+425,canvasBox.y+158,{steps:3});
+await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._instance.setupState.canvas.getObjects()[0]?.opacity===0.55);
+assert.equal(await board(b=>b.getObjects().length),1);
+assert.equal(await board(b=>b.getObjects()[0].stroke),'#6b7280');
+await page.mouse.up();await count(0);
 await page.getByRole('button',{name:'撤销',exact:true}).click();await count(1);await idle();
+assert.equal(await board(b=>b.getObjects()[0].opacity),1);
+assert.equal(await board(b=>b.getObjects()[0].stroke),'#22c55e');
 console.log('PASS restored objects remain erasable');
 await page.getByRole('button',{name:'选择',exact:true}).click();
 await board(b=>{b.getCanvas().setActiveObject(b.getObjects()[0]);b.getCanvas().upperCanvasEl.focus();});

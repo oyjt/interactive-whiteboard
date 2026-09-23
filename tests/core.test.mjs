@@ -26,7 +26,7 @@ test('history returns to initial state, truncates redo and bounds memory', () =>
 
 test('settings sanitize corrupt or out-of-range saved values', () => {
   assert.deepEqual(normalizeBrushSettings(null), DEFAULT_BRUSH_SETTINGS);
-  assert.deepEqual(normalizeBrushSettings({ color: '#AABBCC', width: 90, eraserWidth: -3 }), { color: '#aabbcc', width: 40 });
+  assert.deepEqual(normalizeBrushSettings({ color: '#AABBCC', width: 90, eraserWidth: -3, fontSize: 200 }), { color: '#aabbcc', width: 40, fontSize: 96 });
   assert.deepEqual(normalizeBrushSettings({ color: 'url(x)', width: NaN, eraserWidth: '20' }), DEFAULT_BRUSH_SETTINGS);
   assert.deepEqual(readBrushSettings(), DEFAULT_BRUSH_SETTINGS);
   assert.doesNotThrow(() => saveBrushSettings(DEFAULT_BRUSH_SETTINGS));

@@ -3,29 +3,26 @@ import { Line, classRegistry } from 'fabric';
 class Arrow extends Line {
   static type = 'Arrow';
   _render(ctx: CanvasRenderingContext2D) {
-    super._render(ctx)
-
+    super._render(ctx);
+    const { x1, y1, x2, y2 } = this.calcLinePoints();
+    const length = Math.hypot(x2 - x1, y2 - y1);
+    if (length < 1 || !this.stroke) return;
+    const headLength = Math.min(14 + this.strokeWidth, length / 2);
     ctx.save();
-    // 乘或除对应的scaleX(Y)，抵消元素放缩造成的影响，使箭头不会变形
-    ctx.scale(1 / this.scaleX, 1 / this.scaleY);
-    const xDiff = (this.x2 - this.x1) * this.scaleX;
-    const yDiff = (this.y2 - this.y1) * this.scaleY;
-    const angle = Math.atan2(yDiff, xDiff);
-    ctx.translate(((this.x2 - this.x1) / 2) * this.scaleX, ((this.y2 - this.y1) / 2) * this.scaleY);
-    ctx.rotate(angle);
+    ctx.translate(x2, y2);
+    ctx.rotate(Math.atan2(y2 - y1, x2 - x1));
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-10, 5);
-    ctx.lineTo(-10, -5);
-    ctx.closePath();
-    ctx.lineWidth = this.strokeWidth ;
+    ctx.moveTo(-headLength, -headLength * 0.55);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-headLength, headLength * 0.55);
+    ctx.lineWidth = this.strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = this.stroke as string;
-    ctx.fillStyle = this.fill as string;
     ctx.stroke();
-    ctx.fill();
     ctx.restore();
   }
-};
+}
 
 classRegistry.setClass(Arrow);
 
