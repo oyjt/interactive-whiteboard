@@ -25,13 +25,15 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, inject, ref, Ref } from "vue";
-import FabricCanvas from "@/core";
-import reset from "./image/reset.svg";
-import plus from "./image/plus.svg";
-import less from "./image/less.svg";
+import { computed, inject, ref, Ref } from 'vue';
 
-const canvas = inject<Ref<FabricCanvas>>("canvas");
+import FabricCanvas from '@/core';
+
+import less from './image/less.svg';
+import plus from './image/plus.svg';
+import reset from './image/reset.svg';
+
+const canvas = inject<Ref<FabricCanvas>>('canvas');
 const zoomRatio = ref<number>(100);
 
 function rSet() {

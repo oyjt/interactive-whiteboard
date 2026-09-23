@@ -5,9 +5,9 @@
   >
     <div class="settings-title mb-4 text-sm font-semibold">{{ toolName }}设置</div>
     <label class="size-label my-2.5 flex items-center justify-between text-xs" :for="sliderId">
-      {{ tool === "text" ? "文字大小" : tool === "pencil" ? "画笔尺寸" : "线宽" }}
+      {{ tool === 'text' ? '文字大小' : tool === 'pencil' ? '画笔尺寸' : '线宽' }}
       <output class="tabular-nums text-slate-500"
-        >{{ tool === "text" ? model.fontSize : model.width }} px</output
+        >{{ tool === 'text' ? model.fontSize : model.width }} px</output
       >
     </label>
     <input
@@ -33,7 +33,7 @@
       </button>
     </div>
     <div class="color-label my-2.5 flex items-center justify-between text-xs">
-      {{ tool === "text" ? "文字颜色" : tool === "pencil" ? "画笔颜色" : "线条颜色" }}
+      {{ tool === 'text' ? '文字颜色' : tool === 'pencil' ? '画笔颜色' : '线条颜色' }}
       <span class="tabular-nums text-slate-500">{{ model.color.toUpperCase() }}</span>
     </div>
     <div class="color-presets flex flex-wrap gap-2">
@@ -88,45 +88,46 @@
     </div>
     <p class="mt-2.5 text-[11px] text-slate-500">
       {{
-        tool === "text"
-          ? "点击输入；拖动可指定换行宽度"
-          : tool === "pencil"
-            ? "应用于下一笔，已有内容不变"
-            : "应用于新绘制的图形，已有内容不变"
+        tool === 'text'
+          ? '点击输入；拖动可指定换行宽度'
+          : tool === 'pencil'
+            ? '应用于下一笔，已有内容不变'
+            : '应用于新绘制的图形，已有内容不变'
       }}
     </p>
   </section>
 </template>
 <script setup lang="ts">
-import { computed, useId } from "vue";
-import type { BrushSettings } from "@/core/brushSettings";
-import type { DrawingTool } from "@/core";
+import { computed, useId } from 'vue';
+
+import type { DrawingTool } from '@/core';
+import type { BrushSettings } from '@/core/brushSettings';
 const model = defineModel<BrushSettings>({ required: true });
 const props = defineProps<{ tool: DrawingTool }>();
 const sliderId = useId();
 const colors = [
-  "#111827",
-  "#ffffff",
-  "#ff0000",
-  "#f97316",
-  "#facc15",
-  "#22c55e",
-  "#3b82f6",
-  "#a855f7",
+  '#111827',
+  '#ffffff',
+  '#ff0000',
+  '#f97316',
+  '#facc15',
+  '#22c55e',
+  '#3b82f6',
+  '#a855f7',
 ];
 const names: Partial<Record<DrawingTool, string>> = {
-  pencil: "画笔",
-  text: "文字",
-  line: "直线",
-  arrow: "箭头",
-  rectangle: "矩形",
-  circle: "圆形",
-  ellipse: "椭圆",
-  triangle: "三角形",
+  pencil: '画笔',
+  text: '文字',
+  line: '直线',
+  arrow: '箭头',
+  rectangle: '矩形',
+  circle: '圆形',
+  ellipse: '椭圆',
+  triangle: '三角形',
 };
-const toolName = computed(() => names[props.tool] ?? "线条");
+const toolName = computed(() => names[props.tool] ?? '线条');
 function updateSize(width: number) {
-  model.value = { ...model.value, [props.tool === "text" ? "fontSize" : "width"]: width };
+  model.value = { ...model.value, [props.tool === 'text' ? 'fontSize' : 'width']: width };
 }
 function updateColor(color: string) {
   model.value = { ...model.value, color };

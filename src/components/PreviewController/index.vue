@@ -42,19 +42,21 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, type Ref, ref, watch } from "vue";
-import close from "./image/close.svg";
-import addPage from "./image/add-page.svg";
-import deleteIcon from "./image/delete.svg";
-import FabricCanvas from "@/core";
+import { inject, type Ref, ref, watch } from 'vue';
 
-const canvas = inject<Ref<FabricCanvas | undefined>>("canvas");
+import FabricCanvas from '@/core';
+
+import addPage from './image/add-page.svg';
+import close from './image/close.svg';
+import deleteIcon from './image/delete.svg';
+
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const scenes = ref<string[]>([]);
 const activeIndex = ref<number>(0);
 
-const emit = defineEmits(["handlePreviewState"]);
+const emit = defineEmits(['handlePreviewState']);
 function handlePreviewState(state: boolean) {
-  emit("handlePreviewState", state);
+  emit('handlePreviewState', state);
 }
 
 function setScenePath(index: number) {
@@ -62,7 +64,7 @@ function setScenePath(index: number) {
 }
 
 function removeScenes(index: number) {
-  if (window.confirm("删除此页及其批注？此操作无法撤销。")) void canvas?.value?.removeScene(index);
+  if (window.confirm('删除此页及其批注？此操作无法撤销。')) void canvas?.value?.removeScene(index);
 }
 
 watch(
@@ -73,12 +75,12 @@ watch(
       scenes.value = board.getScenes();
       activeIndex.value = board.getCurrentScene();
     };
-    board.on("insert:images", update);
-    board.on("current:image", update);
+    board.on('insert:images', update);
+    board.on('current:image', update);
     update();
     cleanup(() => {
-      board.off("insert:images", update);
-      board.off("current:image", update);
+      board.off('insert:images', update);
+      board.off('current:image', update);
     });
   },
   { immediate: true },

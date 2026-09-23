@@ -38,17 +38,19 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, type Ref, watch } from "vue";
-import FabricCanvas from "@/core";
-import next from "./image/next.svg";
-import nextDisabled from "./image/next-disabled.svg";
-import back from "./image/back.svg";
-import backDisabled from "./image/back-disable.svg";
-import first from "./image/first-active.svg";
-import firstDisabled from "./image/first-disable.svg";
-import last from "./image/last-active.svg";
-import lastDisabled from "./image/last-disable.svg";
-const canvas = inject<Ref<FabricCanvas | undefined>>("canvas");
+import { inject, ref, type Ref, watch } from 'vue';
+
+import FabricCanvas from '@/core';
+
+import backDisabled from './image/back-disable.svg';
+import back from './image/back.svg';
+import first from './image/first-active.svg';
+import firstDisabled from './image/first-disable.svg';
+import last from './image/last-active.svg';
+import lastDisabled from './image/last-disable.svg';
+import nextDisabled from './image/next-disabled.svg';
+import next from './image/next.svg';
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const activeIndex = ref(0);
 const scenes = ref<string[]>([]);
 const busy = ref(false);
@@ -67,7 +69,7 @@ watch(
       activeIndex.value = board.getCurrentScene();
       busy.value = board.getHistoryState().busy;
     };
-    const events = ["insert:images", "current:image", "history:changed"];
+    const events = ['insert:images', 'current:image', 'history:changed'];
     events.forEach((event) => board.on(event, update));
     update();
     cleanup(() => events.forEach((event) => board.off(event, update)));

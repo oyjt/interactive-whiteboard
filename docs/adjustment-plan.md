@@ -62,5 +62,13 @@
 - [x] 接入 Oxlint 和 Oxfmt，纳入 CI 与开发命令；在关键时序和边界添加中文 JSDoc。
 - [x] 将环境声明放入 `src/types/`，统一使用根目录的 `AGENTS.md`。
 - [x] 保持共享素材在 `src/assets/`、组件专用 SVG 就近存放；删除未使用的 Vite 默认图标。
-- [ ] `src/core/index.ts` 同时处理绘图、页面、历史、文本和擦除；后续新增相关功能时按职责逐步提取，先补行为回归，再避免一次性重写。
+- [ ] `src/core/index.ts` 仍处理绘图、页面、历史和文本；后续新增相关功能时按职责逐步提取，先补行为回归，再避免一次性重写。
+
+## 第四阶段：配置与画布内聚
+
+- [x] TypeScript 切换 Bundler 模块解析，`vite.config.ts` 纳入主配置检查，移除仅包含 Vite 配置的 `tsconfig.node.json`。
+- [x] 抽出 `src/core/eraser.ts`，让画布入口只处理工具切换和内容提交，橡皮擦手势负责命中、置灰、拖影与清理。
+- [x] Oxfmt 启用 `singleQuote` 与 `sortImports`；Oxlint 保留 ESLint/Vue 基础检查并启用 TypeScript、import、unicorn、oxc 插件。
+- [x] 组件目录保留 PascalCase：Vue 允许两种文件命名形式，现有目录一致，无需批量改名。
+- [ ] 后续新增页面或文本功能时再提取对应状态；避免为一次性整理改动全部画布事件。
 - [ ] 多人编辑、认证、权限、持久化与增量同步另行设计，不属于单发布者预览演示。

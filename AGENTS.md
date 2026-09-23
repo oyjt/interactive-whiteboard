@@ -14,7 +14,7 @@
 | --- | --- |
 | `src/App.vue` | 页面布局、画布创建和销毁、内容变化时更新同步预览。 |
 | `src/core/index.ts` | Fabric 绘图工具、事件、场景与画布操作；内容提交通过 `content:changed` 通知外部。 |
-| `src/core/history.ts`、`brushSettings.ts`、`objects/Arrow.ts` | 独立的历史、配置、可序列化箭头模型。 |
+| `src/core/history.ts`、`brushSettings.ts`、`objects/Arrow.ts`、`eraser.ts` | 历史、配置、可序列化箭头与橡皮擦手势。 |
 | `src/utils/previewSync.ts` | gzip、Base64 编解码的本地模拟；注释标明未来可能的发送与接收位置。 |
 | `src/components/` | 工具栏、设置、翻页、课件预览及撤销控制。 |
 | `src/assets/ppt/`、`src/assets/editor/` | 示例课件和画布控件图像；组件专用图标留在对应组件的 `image/` 下，共用图标放 `src/assets/`。 |
@@ -39,4 +39,6 @@
 - 提交前运行 `pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build` 和 `pnpm test:browser`；浏览器检查会验证编码往返后的预览。无法运行某项时明确说明原因，不能将未运行写成通过。
 - 使用 Oxlint 检查 TS、JS 与 Vue 脚本，使用 Oxfmt 格式化代码；关键接口与特殊时序用中文 JSDoc 描述，不给每一行添加注释。
 - TypeScript 固定为 5.9.3：vue-tsc 3.3.11 无法解析 TS 7 的 `typescript/lib/tsc` 导出；只有相容版本发布且构建、浏览器回归通过后再升级。
-- 优先对已有模块做小幅提取；`src/core/index.ts` 目前较大，新增绘图工具时可按工具拆分，但不要进行无需求的全量重写。
+- `tsconfig.json` 同时检查 `src/` 与 `vite.config.ts`，使用与 Vite 相符的 Bundler 模块解析；无需额外的 `tsconfig.node.json`。
+- 优先对已有模块做小幅提取；橡皮擦手势位于 `src/core/eraser.ts`，页面、历史与绘图入口仍在 `src/core/index.ts`，后续按需求逐步拆分。
+- 组件目录沿用 PascalCase；Vue 同时支持 PascalCase 与 kebab-case，保持现有命名一致即可。

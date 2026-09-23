@@ -1,4 +1,4 @@
-import { gzip, ungzip } from "pako";
+import { gzip, ungzip } from 'pako';
 
 /**
  * 模拟白板快照经过压缩、Base64 传输和解码后的数据。
@@ -7,7 +7,7 @@ import { gzip, ungzip } from "pako";
  */
 export function simulatePreviewTransport<T>(snapshot: T): T {
   const bytes = gzip(JSON.stringify(snapshot));
-  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
   const message = btoa(binary);
 
   // WebSocket 发送位置：实际接入时在这里发送 message。

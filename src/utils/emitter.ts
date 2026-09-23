@@ -1,4 +1,4 @@
-import mitt, { Emitter, EventType, Handler } from "mitt";
+import mitt, { Emitter, EventType, Handler } from 'mitt';
 
 class EventEmitter<T extends Record<EventType, unknown>> {
   private emitter: Emitter<T>;

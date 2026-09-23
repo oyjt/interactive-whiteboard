@@ -21,13 +21,15 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, type Ref, watch } from "vue";
-import FabricCanvas from "@/core";
-import redo from "./image/redo.svg";
-import undo from "./image/undo.svg";
-import redoDisabled from "./image/redo-disabled.svg";
-import undoDisabled from "./image/undo-disabled.svg";
-const canvas = inject<Ref<FabricCanvas | undefined>>("canvas");
+import { inject, ref, type Ref, watch } from 'vue';
+
+import FabricCanvas from '@/core';
+
+import redoDisabled from './image/redo-disabled.svg';
+import redo from './image/redo.svg';
+import undoDisabled from './image/undo-disabled.svg';
+import undo from './image/undo.svg';
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const state = ref({ canUndo: false, canRedo: false, busy: false });
 watch(
   () => canvas?.value,
@@ -36,9 +38,9 @@ watch(
     const update = () => {
       state.value = board.getHistoryState();
     };
-    board.on("history:changed", update);
+    board.on('history:changed', update);
     update();
-    cleanup(() => board.off("history:changed", update));
+    cleanup(() => board.off('history:changed', update));
   },
   { immediate: true },
 );

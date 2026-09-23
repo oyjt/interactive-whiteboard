@@ -51,6 +51,7 @@ pnpm test:browser
 ```
 
 提交代码前还应运行 `pnpm lint`（Oxlint）和 `pnpm format:check`（Oxfmt）；`pnpm format` 可自动格式化源码与配置文件。
+TypeScript 使用 Bundler 模块解析，`tsconfig.json` 同时检查应用代码和 Vite 配置；格式化采用单引号并自动排序 import。
 
 `test` 覆盖历史、设置、箭头序列化和 gzip/Base64 模拟往返；`test:browser` 启动 Vite，验证实际绘制、预览同步、课件与导出。CI 在 Node 24 上运行这些检查。TypeScript 暂固定 5.9.3，因为当前 vue-tsc 版本尚不能加载 TypeScript 7 的内部入口。
 

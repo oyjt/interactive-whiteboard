@@ -1,8 +1,8 @@
-import { Line, classRegistry } from "fabric";
+import { Line, classRegistry } from 'fabric';
 
 /** 可序列化的开放式箭头，继承 Fabric 直线并绘制两段箭头边。 */
 class Arrow extends Line {
-  static type = "Arrow";
+  static type = 'Arrow';
   _render(ctx: CanvasRenderingContext2D) {
     super._render(ctx);
     const { x1, y1, x2, y2 } = this.calcLinePoints();
@@ -17,8 +17,8 @@ class Arrow extends Line {
     ctx.lineTo(0, 0);
     ctx.lineTo(-headLength, headLength * 0.55);
     ctx.lineWidth = this.strokeWidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = this.stroke as string;
     ctx.stroke();
     ctx.restore();

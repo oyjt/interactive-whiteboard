@@ -71,30 +71,31 @@
   </main>
 </template>
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, provide, ref, shallowRef } from "vue";
-import { StaticCanvas } from "fabric";
-import FabricCanvas from "./core";
-import ToolBox from "./components/ToolBox/index.vue";
-import RedoUndo from "./components/RedoUndo/index.vue";
-import ZoomController from "./components/ZoomController/index.vue";
-import PageController from "./components/PageController/index.vue";
-import PreviewController from "./components/PreviewController/index.vue";
-import pages from "./assets/images/pages.svg";
-import { simulatePreviewTransport } from "./utils/previewSync";
+import { StaticCanvas } from 'fabric';
+import { onMounted, onBeforeUnmount, provide, ref, shallowRef } from 'vue';
+
+import pages from './assets/images/pages.svg';
+import PageController from './components/PageController/index.vue';
+import PreviewController from './components/PreviewController/index.vue';
+import RedoUndo from './components/RedoUndo/index.vue';
+import ToolBox from './components/ToolBox/index.vue';
+import ZoomController from './components/ZoomController/index.vue';
+import FabricCanvas from './core';
+import { simulatePreviewTransport } from './utils/previewSync';
 
 const canvas = shallowRef<FabricCanvas>();
-provide("canvas", canvas);
+provide('canvas', canvas);
 const isPreviewShow = ref(false);
 const hasScenes = ref(false);
 const busy = ref(false);
-const error = ref("");
+const error = ref('');
 let mirror: StaticCanvas | undefined;
-let pending: ReturnType<FabricCanvas["toJSON"]> | undefined;
+let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
 let syncing: Promise<void> | undefined;
 let disposed = false;
 
 /** 串行加载预览快照；上一帧尚未完成时只保留最新一帧。 */
-function renderPreview(data: ReturnType<FabricCanvas["toJSON"]>) {
+function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
   pending = data;
   if (syncing) return;
   syncing = (async () => {
@@ -105,7 +106,7 @@ function renderPreview(data: ReturnType<FabricCanvas["toJSON"]>) {
         await mirror.loadFromJSON(data);
         if (!disposed) mirror.requestRenderAll();
       } catch {
-        if (!disposed) error.value = "同步预览加载失败，请重新编辑后重试。";
+        if (!disposed) error.value = '同步预览加载失败，请重新编辑后重试。';
       }
     }
   })().finally(() => {
@@ -114,12 +115,12 @@ function renderPreview(data: ReturnType<FabricCanvas["toJSON"]>) {
 }
 
 /** 在内容提交时模拟一次编码往返，避免渲染事件触发重复传输。 */
-function syncContent(snapshot?: ReturnType<FabricCanvas["toJSON"]>) {
+function syncContent(snapshot?: ReturnType<FabricCanvas['toJSON']>) {
   if (!canvas.value || disposed) return;
   try {
     renderPreview(simulatePreviewTransport(snapshot ?? canvas.value.toJSON()));
   } catch {
-    error.value = "同步数据编码或解码失败，请重新编辑后重试。";
+    error.value = '同步数据编码或解码失败，请重新编辑后重试。';
   }
 }
 
@@ -127,11 +128,11 @@ async function insertPPT() {
   if (
     !hasScenes.value &&
     canvas.value?.getObjects().length &&
-    !window.confirm("打开课件会替换当前白板，请先导出需要保留的内容。继续？")
+    !window.confirm('打开课件会替换当前白板，请先导出需要保留的内容。继续？')
   )
     return;
-  error.value = "";
-  const images = import.meta.glob("@/assets/ppt/*.jpeg", { eager: true, import: "default" });
+  error.value = '';
+  const images = import.meta.glob('@/assets/ppt/*.jpeg', { eager: true, import: 'default' });
   await canvas.value?.insertPPT(
     Object.entries(images)
       .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
@@ -145,12 +146,12 @@ function exportPNG() {
   const transform = [...board.viewportTransform] as typeof board.viewportTransform;
   try {
     board.viewportTransform = [1, 0, 0, 1, 0, 0];
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.download = `白板-${(canvas.value?.getCurrentScene() ?? 0) + 1}.png`;
-    link.href = board.toDataURL({ format: "png", multiplier: 2 });
+    link.href = board.toDataURL({ format: 'png', multiplier: 2 });
     link.click();
   } catch {
-    error.value = "导出失败，请检查图片是否允许跨域访问。";
+    error.value = '导出失败，请检查图片是否允许跨域访问。';
   } finally {
     board.setViewportTransform(transform);
     board.requestRenderAll();
@@ -158,17 +159,17 @@ function exportPNG() {
 }
 
 onMounted(() => {
-  const board = new FabricCanvas("canvas");
+  const board = new FabricCanvas('canvas');
   canvas.value = board;
-  mirror = new StaticCanvas("canvas2");
-  board.on("content:changed", syncContent);
-  board.on("insert:images", () => {
+  mirror = new StaticCanvas('canvas2');
+  board.on('content:changed', syncContent);
+  board.on('insert:images', () => {
     hasScenes.value = board.getScenes().length > 0;
   });
-  board.on("history:changed", () => {
+  board.on('history:changed', () => {
     busy.value = board.getHistoryState().busy;
   });
-  board.on("error", (message: string) => {
+  board.on('error', (message: string) => {
     error.value = message;
   });
   syncContent();

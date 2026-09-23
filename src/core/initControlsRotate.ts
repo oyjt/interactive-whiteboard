@@ -10,7 +10,7 @@ import {
   Canvas,
   BasicTransformEvent,
   FabricObject,
-} from "fabric";
+} from 'fabric';
 
 /**
  * 定义旋转光标样式，根据转动角度设定光标旋转
@@ -47,7 +47,7 @@ function initControlsRotate(canvas: Canvas) {
     y: -0.5,
     offsetY: -10,
     offsetX: -10,
-    actionName: "rotate",
+    actionName: 'rotate',
     actionHandler: controlsUtils.rotationWithSnapping,
     cursorStyleHandler: createRotationCursorHandler(0),
     render: () => false, // 明确表示不渲染此控件
@@ -59,7 +59,7 @@ function initControlsRotate(canvas: Canvas) {
     y: -0.5,
     offsetY: -10,
     offsetX: 10,
-    actionName: "rotate",
+    actionName: 'rotate',
     actionHandler: controlsUtils.rotationWithSnapping,
     cursorStyleHandler: createRotationCursorHandler(90),
     render: () => false,
@@ -71,7 +71,7 @@ function initControlsRotate(canvas: Canvas) {
     y: 0.5,
     offsetY: 10,
     offsetX: 10,
-    actionName: "rotate",
+    actionName: 'rotate',
     actionHandler: controlsUtils.rotationWithSnapping,
     cursorStyleHandler: createRotationCursorHandler(180),
     render: () => false,
@@ -83,7 +83,7 @@ function initControlsRotate(canvas: Canvas) {
     y: 0.5,
     offsetY: 10,
     offsetX: -10,
-    actionName: "rotate",
+    actionName: 'rotate',
     actionHandler: controlsUtils.rotationWithSnapping,
     cursorStyleHandler: createRotationCursorHandler(270),
     render: () => false,
@@ -100,7 +100,7 @@ function initControlsRotate(canvas: Canvas) {
   };
 
   canvas.on(
-    "object:rotating",
+    'object:rotating',
     (event: BasicTransformEvent<TPointerEvent> & { target: FabricObject }) => {
       // 确保有 activeObject 和 transform
       const activeObject = event.target;
@@ -117,16 +117,16 @@ function initControlsRotate(canvas: Canvas) {
 
       // 根据被拖动的角，更新上层画布的光标
       switch (transform.corner) {
-        case "mtr1":
+        case 'mtr1':
           upperCanvas.style.cursor = rotateIcon(activeObject.angle);
           break;
-        case "mtr2":
+        case 'mtr2':
           upperCanvas.style.cursor = rotateIcon(activeObject.angle + 90);
           break;
-        case "mtr3":
+        case 'mtr3':
           upperCanvas.style.cursor = rotateIcon(activeObject.angle + 180);
           break;
-        case "mtr4":
+        case 'mtr4':
           upperCanvas.style.cursor = rotateIcon(activeObject.angle + 270);
           break;
         default:

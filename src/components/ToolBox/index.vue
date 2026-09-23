@@ -47,37 +47,39 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, onMounted, onBeforeUnmount, ref, type Ref, watch } from "vue";
-import { IText } from "fabric";
-import BrushSettings from "./BrushSettings.vue";
-import { readBrushSettings, type BrushSettings as BrushOptions } from "@/core/brushSettings";
-import FabricCanvas, { DrawingTool } from "@/core";
-import selector from "./image/selector.svg";
-import pen from "./image/pencil.svg";
-import text from "./image/text.svg";
-import eraser from "./image/eraser.svg";
-import arrow from "./image/arrow.svg";
-import ellipse from "./image/ellipse.svg";
-import rectangle from "./image/rectangle.svg";
-import straight from "./image/straight.svg";
-import triangle from "./image/triangle.svg";
-import clear from "./image/clear.svg";
+import { IText } from 'fabric';
+import { inject, onMounted, onBeforeUnmount, ref, type Ref, watch } from 'vue';
 
-const canvas = inject<Ref<FabricCanvas | undefined>>("canvas");
+import FabricCanvas, { DrawingTool } from '@/core';
+import { readBrushSettings, type BrushSettings as BrushOptions } from '@/core/brushSettings';
+
+import BrushSettings from './BrushSettings.vue';
+import arrow from './image/arrow.svg';
+import clear from './image/clear.svg';
+import ellipse from './image/ellipse.svg';
+import eraser from './image/eraser.svg';
+import pen from './image/pencil.svg';
+import rectangle from './image/rectangle.svg';
+import selector from './image/selector.svg';
+import straight from './image/straight.svg';
+import text from './image/text.svg';
+import triangle from './image/triangle.svg';
+
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const settings = ref(readBrushSettings());
 const settingsOpen = ref(false);
 const busy = ref(false);
 const toolbarRoot = ref<HTMLElement | null>(null);
 function hasSettings(type: DrawingTool) {
   return (
-    type === "pencil" ||
-    type === "text" ||
-    type === "line" ||
-    type === "arrow" ||
-    type === "rectangle" ||
-    type === "circle" ||
-    type === "triangle" ||
-    type === "ellipse"
+    type === 'pencil' ||
+    type === 'text' ||
+    type === 'line' ||
+    type === 'arrow' ||
+    type === 'rectangle' ||
+    type === 'circle' ||
+    type === 'triangle' ||
+    type === 'ellipse'
   );
 }
 function updateSettings(value: BrushOptions) {
@@ -89,7 +91,7 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onKeyDown(event: KeyboardEvent) {
-  if (event.key === "Escape" && settingsOpen.value) {
+  if (event.key === 'Escape' && settingsOpen.value) {
     settingsOpen.value = false;
     return;
   }
@@ -113,12 +115,12 @@ function onKeyDown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
-  document.addEventListener("pointerdown", onPointerDown);
-  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('keydown', onKeyDown);
 });
 onBeforeUnmount(() => {
-  document.removeEventListener("pointerdown", onPointerDown);
-  document.removeEventListener("keydown", onKeyDown);
+  document.removeEventListener('pointerdown', onPointerDown);
+  document.removeEventListener('keydown', onKeyDown);
 });
 watch(
   () => canvas?.value,
@@ -129,11 +131,11 @@ watch(
       currentShapType.value = board.getDrawingTool();
       busy.value = board.getHistoryState().busy;
     };
-    for (const event of ["settings:changed", "tool:changed", "history:changed"])
+    for (const event of ['settings:changed', 'tool:changed', 'history:changed'])
       board.on(event, update);
     update();
     cleanup(() => {
-      for (const event of ["settings:changed", "tool:changed", "history:changed"])
+      for (const event of ['settings:changed', 'tool:changed', 'history:changed'])
         board.off(event, update);
     });
   },
@@ -146,53 +148,53 @@ type Appliance = {
 };
 const tools = ref<Appliance[]>([
   {
-    name: "选择",
+    name: '选择',
     icon: selector,
-    shapeType: "select",
+    shapeType: 'select',
   },
   {
-    name: "笔",
+    name: '笔',
     icon: pen,
-    shapeType: "pencil",
+    shapeType: 'pencil',
   },
   {
-    name: "文本",
+    name: '文本',
     icon: text,
-    shapeType: "text",
+    shapeType: 'text',
   },
   {
-    name: "橡皮擦",
+    name: '橡皮擦',
     icon: eraser,
-    shapeType: "eraser",
+    shapeType: 'eraser',
   },
   {
-    name: "三角形",
+    name: '三角形',
     icon: triangle,
-    shapeType: "triangle",
+    shapeType: 'triangle',
   },
   {
-    name: "圆形",
+    name: '圆形',
     icon: ellipse,
-    shapeType: "circle",
+    shapeType: 'circle',
   },
   {
-    name: "矩形",
+    name: '矩形',
     icon: rectangle,
-    shapeType: "rectangle",
+    shapeType: 'rectangle',
   },
   {
-    name: "直线",
+    name: '直线',
     icon: straight,
-    shapeType: "line",
+    shapeType: 'line',
   },
   {
-    name: "箭头",
+    name: '箭头',
     icon: arrow,
-    shapeType: "arrow",
+    shapeType: 'arrow',
   },
 ]);
 
-const currentShapType = ref<DrawingTool>("pencil");
+const currentShapType = ref<DrawingTool>('pencil');
 
 function clickAppliance(type: DrawingTool) {
   if (type === currentShapType.value) {
@@ -204,7 +206,7 @@ function clickAppliance(type: DrawingTool) {
 }
 
 function clickClear() {
-  if (canvas?.value?.getObjects().length && !window.confirm("清除当前页所有批注？可通过撤销恢复。"))
+  if (canvas?.value?.getObjects().length && !window.confirm('清除当前页所有批注？可通过撤销恢复。'))
     return;
   settingsOpen.value = false;
   canvas?.value?.clearCanvas();
