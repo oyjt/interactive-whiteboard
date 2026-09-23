@@ -1,21 +1,25 @@
 <template>
-    <div class="tool-mid-box-left">
-        <div class="tool-box-cell-box-left"  v-for="item in tools" :key="item.shapeType">
-            <div class="tool-box-cell"
-                    @click="clickAppliance(item.shapeType)">
-                <img :src="item.shapeType === currentShapType ? item.iconActive : item.icon" :alt="item.name"/>
-            </div>
-        </div>
-        <div class="tool-box-cell-box-left">
-            <div class="tool-box-cell"
-                    @click="clickClear">
-                <img :src="clear" alt="清屏"/>
-            </div>
-        </div>
+  <div class="tools-layout">
+    <div class="tool-mid-box-left" role="toolbar" aria-label="绘图工具">
+      <button v-for="item in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left"
+        :title="item.name" :aria-label="item.name" :aria-pressed="item.shapeType === currentShapType"
+        :disabled="busy" @click="clickAppliance(item.shapeType)">
+        <img :src="item.shapeType === currentShapType ? item.iconActive : item.icon" alt="" />
+      </button>
+      <button type="button" class="tool-box-cell-box-left" title="清除批注（保留背景）" aria-label="清除批注" :disabled="busy" @click="clickClear">
+        <img :src="clear" alt="" />
+      </button>
+      <button v-if="currentShapType === 'pencil' || currentShapType === 'eraser'" type="button" class="tool-box-cell-box-left"
+        aria-label="切换工具设置" :aria-expanded="settingsOpen" @click="settingsOpen = !settingsOpen">⚙</button>
     </div>
+    <BrushSettings v-if="settingsOpen && (currentShapType === 'pencil' || currentShapType === 'eraser')"
+      :model-value="settings" :eraser="currentShapType === 'eraser'" @update:model-value="updateSettings" />
+  </div>
 </template>
 <script setup lang="ts">
-import { inject, onMounted, ref, Ref } from 'vue'
+import { inject, ref, type Ref, watch } from 'vue'
+import BrushSettings from './BrushSettings.vue'
+import { readBrushSettings, type BrushSettings as BrushOptions } from '@/core/brushSettings'
 import FabricCanvas, { DrawingTool } from '@/core'
 import selector from "./image/selector.svg";
 import selectorActive from "./image/selector-active.svg";
@@ -37,7 +41,22 @@ import triangle from "./image/triangle.svg";
 import triangleActive from "./image/triangle-active.svg";
 import clear from "./image/clear.svg";
 
-const canvas = inject<Ref<FabricCanvas>>('canvas');
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
+const settings = ref(readBrushSettings());
+const settingsOpen = ref(false);
+const busy = ref(false);
+function updateSettings(value: BrushOptions) { canvas?.value?.setBrushSettings(value); }
+watch(() => canvas?.value, (board, _, cleanup) => {
+  if (!board) return;
+  const update = () => {
+    settings.value = board.getBrushSettings();
+    currentShapType.value = board.getDrawingTool();
+    busy.value = board.getHistoryState().busy;
+  };
+  for (const event of ['settings:changed', 'tool:changed', 'history:changed']) board.on(event, update);
+  update();
+  cleanup(() => { for (const event of ['settings:changed', 'tool:changed', 'history:changed']) board.off(event, update); });
+});
 
 type Appliance = {
     readonly name: string;
@@ -95,147 +114,18 @@ const tools = ref<Appliance[]>([{
 const currentShapType = ref<string>("pencil");
 
 function clickAppliance(type: DrawingTool) {
-    currentShapType.value = type;
-    canvas?.value.setDrawingTool(type)
+    canvas?.value?.setDrawingTool(type)
+    settingsOpen.value = type === 'pencil' || type === 'eraser';
 }
 
 function clickClear() {
-  canvas?.value.clearCanvas()
+  canvas?.value?.clearCanvas()
 }
 </script>
-<style lang="scss" scoped>
-.tool-mid-box {
-  height: 32px;
-  display: flex;
-  border-radius: 4px;
-  justify-content: space-between;
-  padding-left: 6px;
-  padding-right: 6px;
-  background-color: white;
-}
-
-.tool-mid-box-left {
-  width: 40px;
-  display: flex;
-  border-radius: 4px;
-  background-color: white;
-  justify-content: space-between;
-  align-items: center;
-  flex-direction: column;
-  padding-bottom: 4px;
-  padding-top: 4px;
-  box-shadow:0 8px 24px 0 rgba(0,0,0,0.1);
-}
-
-.tool-box-cell {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-}
-
-.tool-box-cell-color {
-  width: 14px;
-  height: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.24);
-}
-
-.tool-box-cell-subscript {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-}
-
-.tool-box-cell-box-left {
-  width: 32px;
-  height: 32px;
-  user-select: none;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 2px;
-  &:hover {
-    background: rgba(33,35,36,0.1);
-  }
-}
-
-.tool-box-cell-step-two {
-  height: 2px;
-  border-radius: 1px;
-  margin-top: -4px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.tool-box-cell-step-two {
-  height: 2px;
-  border-radius: 1px;
-  margin-top: -4px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.palette-box {
-  width: 188px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.palette-box-color {
-  width: 188px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.stroke-script {
-  width: 156px;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  height: 17px;
-}
-
-.stroke-script-text {
-  height: 17px;
-  font-size: 12px;
-  font-family: PingFangSC-Regular, PingFang SC, sans-serif;
-  font-weight: 400;
-  color: rgba(33, 35, 36, 1);
-  line-height: 17px;
-}
-
-.draw-tool-box-title {
-  width: 100%;
-  div {
-    font-weight: bold;
-    margin-left: 16px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-  }
-}
-
-.palette-stroke-under-layer {
-  width: 242px;
-  height: 32px;
-  position: absolute;
-  z-index: 1;
-}
-
-.palette-stroke-slider-mask {
-  width: 290px;
-  height: 32px;
-  position: absolute;
-  z-index: 3;
-  display: flex;
-  justify-content: center;
-}
+<style scoped>
+.tools-layout { display: flex; align-items: center; gap: 8px; }
+.tool-mid-box-left { width: 40px; display: flex; flex-direction: column; align-items: center; background: white; padding: 4px 0; border-radius: 6px; box-shadow: 0 4px 12px #0f172a14; }
+.tool-box-cell-box-left { width: 32px; height: 32px; padding: 4px; border: none; background: transparent; border-radius: 4px; flex-shrink: 0; }
+.tool-box-cell-box-left img { width: 24px; height: 24px; }
+.tool-box-cell-box-left:hover, .tool-box-cell-box-left[aria-pressed=true] { background: #eff6ff; }
 </style>

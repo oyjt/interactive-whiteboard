@@ -18,8 +18,8 @@
         <div style="height: 64px"></div>
         <div class="menu-annex-body">
             <div class="preview-cells-box">
-                <div class="page-out-box" v-for="(item, index) in scenes">
-                    <div @click="setScenePath(index)" class="page-box" :class="{active: activeIndex === index}"> 
+                <div class="page-out-box" v-for="(item, index) in scenes" :key="index">
+                    <div @click="setScenePath(index)" class="page-box" :class="{active: activeIndex === index}">
                         <img class="ppt-image" :src="item" />
                     </div>
                     <div class="page-box-under">
@@ -37,13 +37,13 @@
 </template>
 <script setup lang="ts">
 
-import { inject, Ref, ref, watchEffect } from 'vue';
+import { inject, type Ref, ref, watch } from 'vue';
 import close from "./image/close.svg";
 import addPage from "./image/add-page.svg";
 import deleteIcon from "./image/delete.svg";
 import FabricCanvas from '@/core';
 
-const canvas = inject<Ref<FabricCanvas>>('canvas');
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const scenes = ref<string[]>([]);
 const activeIndex = ref<number>(0);
 
@@ -53,23 +53,21 @@ function handlePreviewState(state: boolean) {
 }
 
 function setScenePath(index: number) {
-    canvas?.value.setCurrentScene(index)
+    canvas?.value?.setCurrentScene(index)
 }
 
 function removeScenes(index: number) {
-
+    if (window.confirm('删除此页及其批注？此操作无法撤销。')) void canvas?.value?.removeScene(index);
 }
 
-watchEffect(()=> {
-  if(canvas?.value) {
-    canvas.value.on('insert:images', (urls: string[]) => {
-        scenes.value = urls;
-    })
-    canvas.value.on('current:image', (index: number) => {
-      activeIndex.value = index;
-    })
-  }
-})
+watch(() => canvas?.value, (board, _, cleanup) => {
+  if (!board) return;
+  const update = () => { scenes.value = board.getScenes(); activeIndex.value = board.getCurrentScene(); };
+  board.on('insert:images', update);
+  board.on('current:image', update);
+  update();
+  cleanup(() => { board.off('insert:images', update); board.off('current:image', update); });
+}, { immediate: true });
 </script>
 <style lang="scss">
 .menu-title-line {
@@ -126,7 +124,7 @@ watchEffect(()=> {
 
 .menu-annex-body {
     width: 100%;
-    height: calc(100vh - 64px);
+    height: calc(100% - 64px);
     background-color: white;
 }
 
@@ -287,7 +285,7 @@ watchEffect(()=> {
 }
 
 .preview-cells-box {
-    height: calc(100vh - 62px);
+    min-height: calc(100% - 62px);
 }
 
 .page-box-inner-index-right {

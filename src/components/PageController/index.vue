@@ -1,91 +1,53 @@
 <template>
   <div class="whiteboard-annex-box">
-    <div @click="setFirstStep" class="whiteboard-annex-arrow">
+    <button aria-label="首页" :disabled="isFirst()" @click="setFirstStep" class="whiteboard-annex-arrow">
       <img :src="isFirst() ? firstDisabled : first" alt="first" />
-    </div>
-    <div @click="handlePptPreviousStep" class="whiteboard-annex-arrow">
+    </button>
+    <button aria-label="上一页" :disabled="isFirst()" @click="handlePptPreviousStep" class="whiteboard-annex-arrow">
       <img :src="isFirst() ? backDisabled : back" alt="back" />
-    </div>
-    <div className="whiteboard-annex-arrow-page">
+    </button>
+    <div class="whiteboard-annex-arrow-page">
       {{activeIndex + 1}} / {{scenes.length}}
     </div>
-    <div @click="handlePptNextStep" class="whiteboard-annex-arrow">
+    <button aria-label="下一页" :disabled="isLast()" @click="handlePptNextStep" class="whiteboard-annex-arrow">
       <img :src="isLast() ? nextDisabled : next" alt="next" />
-    </div>
-    <div @click="setLastStep" class="whiteboard-annex-arrow">
+    </button>
+    <button aria-label="末页" :disabled="isLast()" @click="setLastStep" class="whiteboard-annex-arrow">
       <img :src="isLast() ? lastDisabled : last" alt="last" />
-    </div>
+    </button>
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, Ref, watchEffect } from 'vue'
-import FabricCanvas from '@/core'
-import next from "./image/next.svg";
-import nextDisabled from "./image/next-disabled.svg";
-import back from "./image/back.svg";
-import backDisabled from "./image/back-disable.svg";
-import first from "./image/first-active.svg";
-import firstDisabled from "./image/first-disable.svg";
-import last from "./image/last-active.svg";
-import lastDisabled from "./image/last-disable.svg";
-
-const canvas = inject<Ref<FabricCanvas>>('canvas');
-const activeIndex = ref<number>(0);
+import { inject, ref, type Ref, watch } from 'vue';
+import FabricCanvas from '@/core';
+import next from './image/next.svg';
+import nextDisabled from './image/next-disabled.svg';
+import back from './image/back.svg';
+import backDisabled from './image/back-disable.svg';
+import first from './image/first-active.svg';
+import firstDisabled from './image/first-disable.svg';
+import last from './image/last-active.svg';
+import lastDisabled from './image/last-disable.svg';
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
+const activeIndex = ref(0);
 const scenes = ref<string[]>([]);
-
-// 图片渲染
-function renderImg() {
-  canvas?.value.clearCanvas();
-  canvas?.value.setCurrentScene(activeIndex.value);
-}
-
-function handlePptPreviousStep() {
-  --activeIndex.value;
-  if (activeIndex.value < 0) {
-    activeIndex.value = 0;
-    return;
-  }
-  renderImg();
-}
-
-function handlePptNextStep() {
-  ++activeIndex.value;
-  if (activeIndex.value >= scenes.value.length) {
-    activeIndex.value = scenes.value.length-1;
-    return;
-  }
-  renderImg();
-}
-
-function isFirst() {
-  return activeIndex.value === 0;
-}
-
-function isLast() {
-  const lastIndex = scenes.value.length - 1;
-  return activeIndex.value === lastIndex;
-}
-
-function setLastStep() {
-  activeIndex.value = scenes.value.length - 1;
-  renderImg();
-}
-
-function setFirstStep() {
-  activeIndex.value = 0;
-  renderImg();
-}
-
-watchEffect(()=> {
-  if(canvas?.value) {
-    canvas.value.on('insert:images', (urls: string[]) => {
-        scenes.value = urls;
-    })
-    canvas.value.on('current:image', (index: number) => {
-      activeIndex.value = index;
-    })
-  }
-})
+const busy = ref(false);
+const isFirst = () => busy.value || activeIndex.value <= 0;
+const isLast = () => busy.value || activeIndex.value >= scenes.value.length - 1;
+const handlePptPreviousStep = () => canvas?.value?.setCurrentScene(activeIndex.value - 1);
+const handlePptNextStep = () => canvas?.value?.setCurrentScene(activeIndex.value + 1);
+const setFirstStep = () => canvas?.value?.setCurrentScene(0);
+const setLastStep = () => canvas?.value?.setCurrentScene(scenes.value.length - 1);
+watch(() => canvas?.value, (board, _, cleanup) => {
+  if (!board) return;
+  const update = () => {
+    scenes.value = board.getScenes(); activeIndex.value = board.getCurrentScene(); busy.value = board.getHistoryState().busy;
+  };
+  const events = ['insert:images', 'current:image', 'history:changed'];
+  events.forEach(event => board.on(event, update));
+  update();
+  cleanup(() => events.forEach(event => board.off(event, update)));
+}, { immediate: true });
 </script>
 <style lang="scss">
 .whiteboard-annex-box {

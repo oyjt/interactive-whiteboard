@@ -21,6 +21,8 @@ import {
   ModifiedEvent,
   TPointerEvent,
 } from "fabric";
+import { SnapshotHistory } from "./history";
+import { normalizeBrushSettings, readBrushSettings, saveBrushSettings, type BrushSettings } from "./brushSettings";
 import EventEmitter from "@/utils/emitter";
 import Arrow from "./objects/Arrow";
 import initHotKeys from "./initHotKeys";
@@ -56,6 +58,9 @@ import { EraserBrush } from "@erase2d/fabric";
  * // 画笔
  * canvas.drawFreeDraw();
  */
+
+// Persist eraser eligibility across undo, cloning and page changes.
+FabricObject.customProperties = [...new Set([...FabricObject.customProperties, "erasable"])];
 
 interface FabricEvents {
   "object:added": any;
@@ -107,6 +112,91 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   };
   private images: string[] = [];
   private curImageIndex = 0;
+  private settings = readBrushSettings();
+  private history!: SnapshotHistory;
+  private pageHistories: Array<SnapshotHistory | undefined> = [];
+  private busy = false;
+  private disposed = false;
+  private abortController = new AbortController();
+  private commitTimer?: ReturnType<typeof setTimeout>;
+  private cleanupHotkeys: () => void = () => {};
+
+  public getBrushSettings() { return { ...this.settings }; }
+  public getDrawingTool() { return this.drawingTool; }
+  public getScenes() { return [...this.images]; }
+  public getCurrentScene() { return this.curImageIndex; }
+  public getHistoryState() {
+    return { canUndo: !this.busy && this.history.canUndo, canRedo: !this.busy && this.history.canRedo, busy: this.busy };
+  }
+
+  public setBrushSettings(settings: BrushSettings) {
+    this.settings = normalizeBrushSettings(settings);
+    this.options.stroke = this.settings.color;
+    this.options.strokeWidth = this.settings.width;
+    if (this.canvas.freeDrawingBrush) {
+      if (this.drawingTool === "pencil") {
+        this.canvas.freeDrawingBrush.color = this.settings.color;
+        this.canvas.freeDrawingBrush.width = this.settings.width;
+      } else if (this.drawingTool === "eraser") {
+        this.canvas.freeDrawingBrush.width = this.settings.eraserWidth;
+      }
+    }
+    saveBrushSettings(this.settings);
+    this.emit("settings:changed", this.getBrushSettings());
+  }
+
+  private publishHistory() { this.emit("history:changed", this.getHistoryState()); }
+
+  private setBusy(busy: boolean) {
+    this.busy = busy;
+    if (this.disposed) return;
+    this.canvas.wrapperEl.style.pointerEvents = busy ? "none" : "";
+    this.publishHistory();
+  }
+
+  private scheduleCommit() {
+    if (this.busy || this.disposed) return;
+    clearTimeout(this.commitTimer);
+    this.commitTimer = setTimeout(() => this.commit(), 0);
+  }
+
+  public commit() {
+    clearTimeout(this.commitTimer);
+    if (this.busy || this.disposed || this.isDrawing) return;
+    if (this.history.push(JSON.stringify(this.toJSON()))) {
+      this.publishHistory();
+      this.emit("content:changed", this.toJSON());
+    }
+  }
+
+  public async undo() { await this.restoreHistory(-1); }
+  public async redo() { await this.restoreHistory(1); }
+
+  private async restoreHistory(direction: -1 | 1) {
+    if (this.busy || this.disposed) return;
+    this.finishEditing();
+    this.commit();
+    const state = this.history.peek(direction);
+    if (state === undefined) return;
+    this.setBusy(true);
+    try {
+      await this.canvas.loadFromJSON(state, undefined, { signal: this.abortController.signal });
+      if (this.disposed) return;
+      this.history.move(direction);
+      this.canvas.requestRenderAll();
+      this.emit("content:changed", this.toJSON());
+    } catch {
+      if (this.disposed) return;
+      await this.canvas.loadFromJSON(this.history.current, undefined, { signal: this.abortController.signal }).catch(() => {});
+      this.canvas.requestRenderAll();
+      this.emit("error", "恢复画布失败，请重试。");
+    } finally { this.setBusy(false); }
+  }
+
+  private finishEditing() {
+    const active = this.canvas.getActiveObject();
+    if (active instanceof IText && active.isEditing) active.exitEditing();
+  }
 
   constructor(canvasId: string) {
     super();
@@ -116,10 +206,18 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
     });
+    this.options.stroke = this.settings.color;
+    this.options.strokeWidth = this.settings.width;
     this.setDrawingTool("pencil");
+    this.history = new SnapshotHistory(JSON.stringify(this.toJSON()));
 
     // 初始化热键、控件扩展
-    initHotKeys(this.canvas);
+    this.cleanupHotkeys = initHotKeys(this.canvas, {
+      changed: () => this.commit(),
+      undo: () => this.undo(), redo: () => this.redo(),
+      isBusy: () => this.busy || this.disposed,
+      error: () => this.emit("error", "复制或粘贴失败，请重试。"),
+    });
     initControls(this.canvas);
     initControlsRotate(this.canvas);
 
@@ -134,18 +232,27 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
    /** 清空画布 */
   public clearCanvas(): void {
-    this.canvas.clear();
+    if (this.busy || this.disposed) return;
+    this.finishEditing();
+    this.canvas.discardActiveObject();
+    this.canvas.remove(...this.canvas.getObjects());
+    this.canvas.requestRenderAll();
+    this.commit();
   }
 
   // 设置画布背景颜色
   public setBackgroundColor(color: string): void {
+    if (this.busy || this.disposed) return;
     this.canvas.backgroundColor = color;
     this.canvas.requestRenderAll();
+    this.scheduleCommit();
   }
 
   // 设置画布背景图片（居中显示）
-  public setBackgroundImage(imageUrl: string, options?: TOptions<ImageProps>): void {
-    FabricImage.fromURL(imageUrl).then((img) => {
+  public async setBackgroundImage(imageUrl: string, options?: TOptions<ImageProps>): Promise<void> {
+    const img = await FabricImage.fromURL(imageUrl, { crossOrigin: "anonymous", signal: this.abortController.signal });
+    if (this.disposed) return;
+    {
       if (!img) return;
 
       // 计算图片居中的位置
@@ -154,7 +261,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       // 图片高度充满画布，宽度等比缩放
       const scale = canvasHeight / (img.height as number);
       const imageWidth = (img.width as number) * scale;
-  
+
       img.set({
         scaleX: scale,
         scaleY: scale,
@@ -166,10 +273,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         evented: false,
         ...options,
       });
-  
+
       this.canvas.backgroundImage = img;
       this.canvas.requestRenderAll();
-    })
+      this.scheduleCommit();
+    }
   }
 
   public addObject(object: FabricObject): void {
@@ -212,14 +320,17 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 切换绘制工具
   public setDrawingTool(tool: DrawingTool) {
-    if (this.drawingTool === tool) return;
-    
+    if (this.busy || this.drawingTool === tool) return;
+    this.finishEditing();
+    this.canvas.discardActiveObject();
+
     // 关闭画布的 isDrawingMode，以及清理自由画笔 state
     this.canvas.isDrawingMode = false;
     this.canvas.selection = false;
     this.canvas.defaultCursor = "default";
 
     this.drawingTool = tool;
+    this.emit("tool:changed", tool);
     if (tool === "pencil") {
       this.drawFreeDraw();
     } else if (tool === "eraser") {
@@ -240,6 +351,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   public setOptions(options: ShapeOptions) {
     this.options = { ...this.options, ...options };
+    this.setBrushSettings({ ...this.settings, color: options.stroke ?? this.settings.color, width: options.strokeWidth ?? this.settings.width });
   }
 
   // 绘制矩形
@@ -314,50 +426,101 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   // 插入图片
-  public insertImage(url: string, options?: TOptions<ImageProps>): void {
-    FabricImage.fromURL(url).then((img) => {
-      if (!img) return;
-      if (options) {
-        img.set(options);
-      } else {
-        // 计算图片居中的位置
-        const canvasWidth = this.canvas.getWidth();
-        const canvasHeight = this.canvas.getHeight();
-        const imageWidth = img.width * img.scaleX;
-        const imageHeight = img.height * img.scaleY;
-        const left = (canvasWidth - imageWidth) / 2;
-        const top = (canvasHeight - imageHeight) / 2;
-        img.set({ left, top });
-      }
+  public async insertImage(url: string, options?: TOptions<ImageProps>): Promise<void> {
+    if (this.busy || this.disposed) return;
+    this.setBusy(true);
+    try {
+      const img = await FabricImage.fromURL(url, { crossOrigin: "anonymous", signal: this.abortController.signal });
+      if (this.disposed) return;
+      const scale = Math.min(1, this.canvas.width / img.width, this.canvas.height / img.height);
+      img.set({ scaleX: scale, scaleY: scale, left: (this.canvas.width - img.width * scale) / 2,
+        top: (this.canvas.height - img.height * scale) / 2, erasable: true, ...options });
       this.canvas.add(img);
-    });
+      this.canvas.requestRenderAll();
+    } catch { this.emit("error", "图片加载失败，请检查地址及跨域设置。"); }
+    finally { this.setBusy(false); }
+    this.commit();
   }
 
-  // 插入ppt图片
-  public insertPPT(urls: string[]): void {
-    this.images = urls;
-    this.setCurrentScene(0);
-    this.emit("insert:images", urls);
+  // A page owns its snapshot history; switching pages cannot mix annotations.
+  public async insertPPT(urls: string[]): Promise<void> {
+    if (this.busy || this.disposed || !urls.length) return;
+    // Reopening the built-in deck must not erase annotations.
+    if (this.images.length) return;
+    this.images = [...urls];
+    this.pageHistories = [];
+    this.emit("insert:images", this.getScenes());
+    await this.setCurrentScene(0);
   }
 
-  // 设置当前显示ppt图片
-  public setCurrentScene(index: number): void {
-    if (index < 0 || index >= this.images.length) return;
-    this.curImageIndex = index;
-    this.setBackgroundImage(this.images[this.curImageIndex]);
-    this.emit("current:image", index);
+  public async setCurrentScene(index: number): Promise<void> {
+    if (this.busy || this.disposed || index < 0 || index >= this.images.length) return;
+    if (index === this.curImageIndex && this.pageHistories[index]) return;
+    this.finishEditing();
+    this.commit();
+    this.setBusy(true);
+    const previous = JSON.stringify(this.toJSON());
+    try {
+      const saved = this.pageHistories[index];
+      if (saved) {
+        await this.canvas.loadFromJSON(saved.current, undefined, { signal: this.abortController.signal });
+      } else {
+        // Load the background before replacing content so a failed image keeps the old page.
+        const img = await FabricImage.fromURL(this.images[index], { crossOrigin: "anonymous", signal: this.abortController.signal });
+        if (this.disposed) return;
+        const scale = Math.min(this.canvas.width / img.width, this.canvas.height / img.height);
+        img.set({ scaleX: scale, scaleY: scale, left: (this.canvas.width - img.width * scale) / 2,
+          top: (this.canvas.height - img.height * scale) / 2, selectable: false, evented: false });
+        this.canvas.clear();
+        this.canvas.backgroundImage = img;
+      }
+      if (this.disposed) return;
+      this.curImageIndex = index;
+      this.history = saved ?? new SnapshotHistory(JSON.stringify(this.toJSON()));
+      this.pageHistories[index] = this.history;
+      this.canvas.requestRenderAll();
+      this.emit("current:image", index);
+      this.emit("content:changed", this.toJSON());
+    } catch {
+      if (this.disposed) return;
+      await this.canvas.loadFromJSON(previous, undefined, { signal: this.abortController.signal }).catch(() => {});
+      this.canvas.requestRenderAll();
+      this.emit("error", "页面加载失败，已保留原页面。");
+    } finally { this.setBusy(false); }
+  }
+
+  public async removeScene(index: number) {
+    if (this.busy || this.disposed || index < 0 || index >= this.images.length) return;
+    this.finishEditing();
+    this.commit();
+    if (index === this.curImageIndex && this.images.length > 1) {
+      // Load the replacement first: a network failure must not delete the current page.
+      await this.setCurrentScene(index === this.images.length - 1 ? index - 1 : index + 1);
+      if (this.curImageIndex === index || this.disposed) return;
+    }
+    this.images.splice(index, 1);
+    this.pageHistories.splice(index, 1);
+    if (!this.images.length) {
+      this.canvas.clear();
+      this.curImageIndex = 0;
+      this.history = new SnapshotHistory(JSON.stringify(this.toJSON()));
+      this.publishHistory();
+      this.emit("content:changed", this.toJSON());
+    } else if (index < this.curImageIndex) this.curImageIndex--;
+    this.emit("insert:images", this.getScenes());
+    this.emit("current:image", this.curImageIndex);
   }
 
   /** 橡皮擦（使用 @erase2d/fabric EraserBrush） */
   public eraser(options?: { width?: number }): void {
     const eraser = new EraserBrush(this.canvas);
     if (options?.width) eraser.width = options.width;
-    else eraser.width = 10;
-   
+    else eraser.width = this.settings.eraserWidth;
+
     this.canvas.freeDrawingBrush = eraser;
     this.canvas.freeDrawingCursor = "default";
     this.canvas.isDrawingMode = true;
-    
+
      eraser.on('end', async (e) => {
       e.preventDefault();
       // 删除
@@ -365,11 +528,18 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       // 删除单个对象或者一组对象
       const targets = e.detail.targets;
       targets.forEach((obj: FabricObject) => obj.group?.remove(obj) || this.canvas.remove(obj));
+      this.canvas.requestRenderAll();
+      this.scheduleCommit();
     });
   }
 
   // 初始化事件
   private initEvent() {
+    this.canvas.on("object:added", () => this.scheduleCommit());
+    this.canvas.on("object:removed", () => this.scheduleCommit());
+    this.canvas.on("object:modified", () => this.scheduleCommit());
+    this.canvas.on("path:created", () => this.scheduleCommit());
+    this.canvas.on("text:editing:exited", () => this.scheduleCommit());
     // 绑定添加对象事件，将当前画布状态保存到撤销栈中
     this.canvas.on("object:added", (e: { target: FabricObject }) => {
       this.emit("object:added", e);
@@ -493,6 +663,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.isDrawing = false;
     this.currentShape = null;
     this.emit("mouse:up", null);
+    this.scheduleCommit();
   }
 
   public toDataURL(options?: TDataUrlOptions) {
@@ -503,12 +674,14 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     return this.canvas.toJSON();
   }
 
-  public loadFromJSON(json: any, callback?: () => void): void {
-    if (!json) return;
-    this.canvas.loadFromJSON(json).then(() => {
+  public async loadFromJSON(json: string | Record<string, unknown>): Promise<void> {
+    if (this.busy || this.disposed) return;
+    this.setBusy(true);
+    try {
+      await this.canvas.loadFromJSON(json, undefined, { signal: this.abortController.signal });
       this.canvas.requestRenderAll();
-      if (typeof callback === "function") callback();
-    });
+    } finally { this.setBusy(false); }
+    this.commit();
   }
 
   public renderAll(): void {
@@ -522,7 +695,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public zoom(ratio: number = 1) {
     // 计算缩放中心
     const point = new Point(this.canvas.width / 2, this.canvas.height / 2);
-    this.canvas.zoomToPoint(point, ratio);
+    this.canvas.zoomToPoint(point, Math.min(4, Math.max(0.25, ratio)));
   }
 
   // 获取缩放比率
@@ -541,9 +714,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   // 销毁事件监听
-  public destroy() {
+  public async destroy() {
+    this.disposed = true;
+    this.abortController.abort();
+    clearTimeout(this.commitTimer);
+    this.cleanupHotkeys();
     this.removeAllListeners();
-    this.canvas.destroy();
+    await this.canvas.dispose();
   }
 }
 

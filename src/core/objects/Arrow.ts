@@ -1,6 +1,7 @@
-import { Line } from 'fabric';
+import { Line, classRegistry } from 'fabric';
 
 class Arrow extends Line {
+  static type = 'Arrow';
   _render(ctx: CanvasRenderingContext2D) {
     super._render(ctx)
 
@@ -25,5 +26,7 @@ class Arrow extends Line {
     ctx.restore();
   }
 };
+
+classRegistry.setClass(Arrow);
 
 export default Arrow;

@@ -149,11 +149,13 @@ function initControls(canvas: Canvas) {
   // 删除操作的 handler
   function deleteObjectHandler(eventData: TPointerEvent, transform: Transform, x: number, y: number) {
     if (transform.action === 'rotate') return true;
-    const activeObjects = canvas.getActiveObjects();
+    const owner = transform.target.canvas;
+    if (!owner) return false;
+    const activeObjects = owner.getActiveObjects();
     if (activeObjects.length > 0) {
-        activeObjects.forEach((obj) =>  canvas.remove(obj));
-        canvas.requestRenderAll();
-        canvas.discardActiveObject();
+        activeObjects.forEach((obj) =>  owner.remove(obj));
+        owner.requestRenderAll();
+        owner.discardActiveObject();
     }
     return true;
   }
@@ -172,7 +174,7 @@ function initControls(canvas: Canvas) {
   });
 
   // 获取默认控件
-  const ownDefaults = InteractiveFabricObject.ownDefaults; 
+  const ownDefaults = InteractiveFabricObject.ownDefaults;
   const controls = InteractiveFabricObject.ownDefaults.controls;
 
   // 设置全局样式

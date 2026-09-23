@@ -1,84 +1,29 @@
 <template>
   <div class="redo-undo">
-    <div class="redo-undo-controller-btn" @click="handleUndo">
-      <img :src="stage !== historyList.length ? undo : undoDisabled" alt="后退" />
-    </div>
-    <div class="redo-undo-controller-btn" @click="handleRedo">
-      <img :src="stage ? redo : redoDisabled" alt="重做" />
-    </div>
+    <button class="redo-undo-controller-btn" aria-label="撤销" :disabled="!state.canUndo" @click="canvas?.undo()">
+      <img :src="state.canUndo ? undo : undoDisabled" alt="" />
+    </button>
+    <button class="redo-undo-controller-btn" aria-label="重做" :disabled="!state.canRedo" @click="canvas?.redo()">
+      <img :src="state.canRedo ? redo : redoDisabled" alt="" />
+    </button>
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, Ref, watchEffect } from 'vue'
-import FabricCanvas from '@/core'
-import { keyNames, hotkeys } from '@/core/initHotKeys';
-import redo from "./image/redo.svg";
-import undo from "./image/undo.svg";
-import redoDisabled from "./image/redo-disabled.svg";
-import undoDisabled from "./image/undo-disabled.svg";
-
-const canvas = inject<Ref<FabricCanvas>>('canvas');
-// 最大步数
-const maxStep = 10;
-// 当前阶段
-const stage = ref<number>(0);
-const historyList = ref<any>([]);
-
-// 根据数据渲染
-function renderCanvas(data: any) {
-  if (!canvas?.value) return;
-  canvas.value.clearCanvas();
-  canvas.value.loadFromJSON(data, () => {
-    canvas.value.renderAll();
-  });
-}
-
-// 撤销
-function handleUndo() {
-  const length = historyList.value.length;
-  if (!canvas?.value || !length) return;
-
-  if (stage.value < length) {
-    const canvasState = historyList.value[length - 1 - stage.value - 1];
-    renderCanvas(canvasState);
-    stage.value += 1;
-  }
-}
-
-// 重做
-function handleRedo() {
-  const length = historyList.value.length;
-  if (!canvas?.value || !length) return;
-
-  if (stage.value > 0) {
-    const canvasState = historyList.value[length - 1 - stage.value + 1];
-    renderCanvas(canvasState);
-    stage.value -= 1;
-  }
-}
-
-function addToUndoStack() {
-  if (!canvas?.value) return;
-  const data = canvas.value.toJSON()
-  if (historyList.value.length > maxStep) {
-    historyList.value.shift();
-  }
-  historyList.value.push(data);
-}
-
-function initEvent() {
-  if (!canvas?.value) return;
-  canvas.value.on('mouse:up', addToUndoStack)
-
-  hotkeys(keyNames.ctrlz, handleUndo);
-  hotkeys(keyNames.ctrly, handleRedo);
-}
-
-watchEffect(() => {
-  if (canvas?.value) {
-    initEvent()
-  }
-})
+import { inject, ref, type Ref, watch } from 'vue';
+import FabricCanvas from '@/core';
+import redo from './image/redo.svg';
+import undo from './image/undo.svg';
+import redoDisabled from './image/redo-disabled.svg';
+import undoDisabled from './image/undo-disabled.svg';
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
+const state = ref({ canUndo: false, canRedo: false, busy: false });
+watch(() => canvas?.value, (board, _, cleanup) => {
+  if (!board) return;
+  const update = () => { state.value = board.getHistoryState(); };
+  board.on('history:changed', update);
+  update();
+  cleanup(() => board.off('history:changed', update));
+}, { immediate: true });
 </script>
 <style lang="scss">
 .redo-undo {

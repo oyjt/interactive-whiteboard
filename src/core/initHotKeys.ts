@@ -1,81 +1,79 @@
-/**
- * 快捷键功能
- */
+import { ActiveSelection, Canvas, FabricObject, IText } from 'fabric';
+import hotkeys, { type HotkeysEvent } from 'hotkeys-js';
 
-import { Canvas, FabricObject } from 'fabric/fabric-impl';
-import hotkeys from 'hotkeys-js';
-
-const keyNames = {
-  lrdu: 'left,right,down,up', // 左右上下
-  backspace: 'backspace', // backspace键盘
-  ctrlz: 'ctrl+z', // 撤销
-  ctrly: 'ctrl+y', // 恢复
-  ctrlc: 'ctrl+c', // 复制
-  ctrlv: 'ctrl+v', // 粘贴
-};
-
-function copyElement(canvas: Canvas) {
-  let copyEl: FabricObject | null = null;
-
-  // 复制
-  hotkeys(keyNames.ctrlc, () => {
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
-    activeObject.clone().then((_copyEl) => {
-      canvas.discardActiveObject();
-        _copyEl.set({
-          left: (_copyEl.left as number) + 20,
-          top: (_copyEl.top as number) + 20,
-          evented: true,
-        });
-        copyEl = _copyEl;
-    });
-  });
-  // 粘贴
-  hotkeys(keyNames.ctrlv, () => {
-    if (!copyEl) return;
-    canvas.add(copyEl);
-    canvas.setActiveObject(copyEl);
-  });
+interface Actions {
+  changed: () => void;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  isBusy: () => boolean;
+  error: () => void;
 }
 
-function initHotkeys(canvas: Canvas) {
-  // 删除快捷键
-  hotkeys(keyNames.backspace, () => {
-    const activeObject = canvas.getActiveObjects();
-    if (activeObject) {
-      activeObject.map((item) => canvas.remove(item));
-      canvas.requestRenderAll();
-      canvas.discardActiveObject();
-    }
+export default function initHotkeys(canvas: Canvas, actions: Actions) {
+  let clipboard: FabricObject | undefined;
+  let offset = 0;
+  let disposed = false;
+  const element = canvas.upperCanvasEl;
+  element.tabIndex = 0;
+  element.setAttribute('aria-label', '白板画布');
+  const focus = () => element.focus({ preventScroll: true });
+  element.addEventListener('pointerdown', focus);
+  const bindings: Array<() => void> = [];
+
+  function bind(keys: string, action: (event: KeyboardEvent, handler: HotkeysEvent) => void | Promise<void>) {
+    const callback = (event: KeyboardEvent, handler: HotkeysEvent) => {
+      const active = canvas.getActiveObject();
+      if (disposed || actions.isBusy() || document.activeElement !== element ||
+          (active instanceof IText && active.isEditing)) return;
+      event.preventDefault();
+      Promise.resolve(action(event, handler)).catch(actions.error);
+    };
+    hotkeys(keys, callback);
+    bindings.push(() => hotkeys.unbind(keys, callback));
+  }
+
+  bind('backspace,delete', () => {
+    canvas.remove(...canvas.getActiveObjects());
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    actions.changed();
+  });
+  bind('left,right,up,down', (_, handler) => {
+    const object = canvas.getActiveObject();
+    if (!object) return;
+    object.set({ left: object.left + (handler.key === 'left' ? -1 : handler.key === 'right' ? 1 : 0),
+      top: object.top + (handler.key === 'up' ? -1 : handler.key === 'down' ? 1 : 0) });
+    object.setCoords();
+    canvas.requestRenderAll();
+    actions.changed();
+  });
+  bind('ctrl+z,command+z', actions.undo);
+  bind('ctrl+y,ctrl+shift+z,command+shift+z', actions.redo);
+  bind('ctrl+c,command+c', async () => {
+    const object = canvas.getActiveObject();
+    if (object) { clipboard = await object.clone(); offset = 0; }
+  });
+  bind('ctrl+v,command+v', async () => {
+    if (!clipboard) return;
+    const clone = await clipboard.clone();
+    if (disposed || actions.isBusy()) return;
+    offset += 20;
+    clone.set({ left: clone.left + offset, top: clone.top + offset, evented: true });
+    canvas.discardActiveObject();
+    if (clone instanceof ActiveSelection) {
+      clone.canvas = canvas;
+      clone.forEachObject(object => canvas.add(object));
+    } else canvas.add(clone);
+    clone.setCoords();
+    canvas.setActiveObject(clone);
+    canvas.requestRenderAll();
+    actions.changed();
   });
 
-  // 移动快捷键
-  hotkeys(keyNames.lrdu, (event, handler) => {
-    const activeObject = canvas.getActiveObject();
-    if (activeObject) {
-      switch (handler.key) {
-        case 'left':
-          activeObject.set('left', activeObject.left - 1);
-          break;
-        case 'right':
-          activeObject.set('left', activeObject.left + 1);
-          break;
-        case 'down':
-          activeObject.set('top', activeObject.top + 1);
-          break;
-        case 'up':
-          activeObject.set('top', activeObject.top - 1);
-          break;
-        default:
-      }
-      canvas.renderAll();
-    }
-  });
-
-  // 复制粘贴
-  copyElement(canvas);
+  return () => {
+    disposed = true;
+    element.removeEventListener('pointerdown', focus);
+    bindings.forEach(unbind => unbind());
+    clipboard = undefined;
+  };
 }
-
-export default initHotkeys;
-export { keyNames, hotkeys };
