@@ -21,7 +21,24 @@ async function draw(x=400,y=120,dx=140,dy=40){
 try {
 await page.goto('http://127.0.0.1:5173/interactive-whiteboard/');
 await page.waitForSelector('.upper-canvas');
+assert.equal(await page.locator('.tool-mid-box-left').evaluate(el=>getComputedStyle(el).flexDirection),'column');
 await page.getByRole('button',{name:'笔',exact:true}).click();
+assert.equal(await page.getByRole('button',{name:'切换工具设置'}).getAttribute('aria-expanded'),'true');
+await page.getByRole('button',{name:'笔',exact:true}).click();
+assert.equal(await page.getByRole('button',{name:'切换工具设置'}).getAttribute('aria-expanded'),'false');
+await page.getByRole('button',{name:'切换工具设置'}).click();
+await page.keyboard.press('Escape');
+assert.equal(await page.getByRole('button',{name:'切换工具设置'}).getAttribute('aria-expanded'),'false');
+await page.getByRole('button',{name:'切换工具设置'}).click();
+await page.locator('.app-header h1').click();
+assert.equal(await page.getByRole('button',{name:'切换工具设置'}).getAttribute('aria-expanded'),'false');
+await board(b=>b.getCanvas().upperCanvasEl.focus());
+await page.keyboard.press('1');
+assert.equal(await board(b=>b.getDrawingTool()),'select');
+await page.keyboard.press('2');
+assert.equal(await board(b=>b.getDrawingTool()),'pencil');
+console.log('PASS toolbar toggles, dismissal, focused shortcuts and original layout');
+assert.equal(await page.getByRole('button',{name:'切换工具设置'}).getAttribute('aria-expanded'),'true');
 await page.getByRole('button',{name:'10',exact:true}).click();
 await page.getByRole('button',{name:'选择颜色 #3b82f6',exact:true}).click();
 assert.equal(await page.getByRole('button',{name:'撤销',exact:true}).isDisabled(),true);

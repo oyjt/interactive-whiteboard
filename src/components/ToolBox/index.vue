@@ -1,8 +1,8 @@
 <template>
-  <div class="tools-layout">
+  <div ref="toolbarRoot" class="tools-layout">
     <div class="tool-mid-box-left" role="toolbar" aria-label="绘图工具">
-      <button v-for="item in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left"
-        :title="item.name" :aria-label="item.name" :aria-pressed="item.shapeType === currentShapType"
+      <button v-for="(item, index) in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left"
+        :title="`${item.name} (${index + 1})`" :aria-label="item.name" :aria-pressed="item.shapeType === currentShapType"
         :disabled="busy" @click="clickAppliance(item.shapeType)">
         <img :src="item.shapeType === currentShapType ? item.iconActive : item.icon" alt="" />
       </button>
@@ -17,7 +17,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, type Ref, watch } from 'vue'
+import { inject, onMounted, onBeforeUnmount, ref, type Ref, watch } from 'vue'
+import { IText } from 'fabric'
 import BrushSettings from './BrushSettings.vue'
 import { readBrushSettings, type BrushSettings as BrushOptions } from '@/core/brushSettings'
 import FabricCanvas, { DrawingTool } from '@/core'
@@ -45,7 +46,37 @@ const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const settings = ref(readBrushSettings());
 const settingsOpen = ref(false);
 const busy = ref(false);
+const toolbarRoot = ref<HTMLElement | null>(null);
 function updateSettings(value: BrushOptions) { canvas?.value?.setBrushSettings(value); }
+
+function onPointerDown(event: PointerEvent) {
+  if (!toolbarRoot.value?.contains(event.target as Node)) settingsOpen.value = false;
+}
+
+function onKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && settingsOpen.value) {
+    settingsOpen.value = false;
+    return;
+  }
+  const board = canvas?.value;
+  if (!board || busy.value || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+      document.activeElement !== board.getCanvas().upperCanvasEl ||
+      (board.getActiveObject() instanceof IText && (board.getActiveObject() as IText).isEditing)) return;
+  const tool = tools.value[Number(event.key) - 1];
+  if (tool) {
+    event.preventDefault();
+    clickAppliance(tool.shapeType);
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('keydown', onKeyDown);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown);
+  document.removeEventListener('keydown', onKeyDown);
+});
 watch(() => canvas?.value, (board, _, cleanup) => {
   if (!board) return;
   const update = () => {
@@ -114,11 +145,17 @@ const tools = ref<Appliance[]>([{
 const currentShapType = ref<string>("pencil");
 
 function clickAppliance(type: DrawingTool) {
+    if (type === currentShapType.value) {
+      if (type === 'pencil' || type === 'eraser') settingsOpen.value = !settingsOpen.value;
+      return;
+    }
     canvas?.value?.setDrawingTool(type)
     settingsOpen.value = type === 'pencil' || type === 'eraser';
 }
 
 function clickClear() {
+  if (canvas?.value?.getObjects().length && !window.confirm('清除当前页所有批注？可通过撤销恢复。')) return;
+  settingsOpen.value = false;
   canvas?.value?.clearCanvas()
 }
 </script>
