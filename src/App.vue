@@ -25,7 +25,7 @@
       <div class="mirror-heading">同步预览 <span>内容变更后更新</span></div>
       <div class="canvas-wrap mirror-wrap"><canvas id="canvas2" width="800" height="450"></canvas></div>
     </div>
-    <p class="usage-hint">再次点击工具调整尺寸，画笔还可选颜色 · 清除批注保留课件背景 · 画布聚焦时支持 Ctrl / ⌘ 快捷键</p>
+    <p class="usage-hint">画笔与图形工具可调整颜色和线宽 · 橡皮擦直接擦除 · 清除批注保留课件背景</p>
   </main>
 </template>
 <script setup lang="ts">

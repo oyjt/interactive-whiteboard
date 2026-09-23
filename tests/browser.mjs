@@ -55,13 +55,31 @@ await draw(420,220);await count(1);
 assert.equal(await page.getByRole('button',{name:'重做',exact:true}).isDisabled(),true);
 console.log('PASS brush settings, initial undo, redo and history branching');
 await page.getByRole('button',{name:'橡皮擦',exact:true}).click();
-await page.getByRole('button',{name:'40',exact:true}).click();
-assert.equal(await board(b=>b.getCanvas().freeDrawingBrush.width),40);
+assert.equal(await page.getByRole('button',{name:'橡皮擦',exact:true}).getAttribute('aria-expanded'),null);
+assert.equal(await page.getByRole('region',{name:'橡皮擦设置'}).count(),0);
+await page.getByRole('button',{name:'橡皮擦',exact:true}).click();
+assert.equal(await page.locator('.brush-settings').count(),0);
+assert.equal(await board(b=>b.getCanvas().freeDrawingBrush.width),20);
 await page.getByRole('button',{name:'笔',exact:true}).click();
 assert.equal(await board(b=>b.getCanvas().freeDrawingBrush.width),10);
 await page.reload();await page.waitForSelector('.upper-canvas');
-assert.deepEqual(await board(b=>b.getBrushSettings()),{color:'#3b82f6',width:10,eraserWidth:40});
-console.log('PASS separate eraser size and settings persistence');
+assert.deepEqual(await board(b=>b.getBrushSettings()),{color:'#3b82f6',width:10});
+console.log('PASS fixed eraser width and stroke settings persistence');
+for (const name of ['直线','箭头','矩形','圆形','三角形']) {
+  await page.getByRole('button',{name,exact:true}).click();
+  assert.equal(await page.getByRole('button',{name,exact:true}).getAttribute('aria-expanded'),'true');
+  if (name === '直线') {
+    await page.getByRole('button',{name,exact:true}).click();
+    assert.equal(await page.getByRole('button',{name,exact:true}).getAttribute('aria-expanded'),'false');
+    await page.getByRole('button',{name,exact:true}).click();
+  }
+  await page.getByRole('region',{name:`${name}设置`}).getByRole('button',{name:'5',exact:true}).click();
+  await page.getByRole('region',{name:`${name}设置`}).getByRole('button',{name:'选择颜色 #a855f7'}).click();
+  await draw(400,150);await count(1);
+  assert.deepEqual(await board(b=>({color:b.getObjects()[0].stroke,width:b.getObjects()[0].strokeWidth})),{color:'#a855f7',width:5});
+  await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
+}
+console.log('PASS line, arrow and shape color/width settings');
 await page.getByRole('button',{name:'箭头',exact:true}).click();
 await draw(400,150);await count(1);
 assert.equal(await board(b=>b.getObjects()[0].constructor.type),'Arrow');

@@ -3,7 +3,7 @@
     <div class="tool-mid-box-left" role="toolbar" aria-label="绘图工具">
       <button v-for="(item, index) in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left"
         :title="`${item.name} (${index + 1})`" :aria-label="item.name" :aria-pressed="item.shapeType === currentShapType"
-        :aria-expanded="item.shapeType === 'pencil' || item.shapeType === 'eraser' ? item.shapeType === currentShapType && settingsOpen : undefined"
+        :aria-expanded="hasSettings(item.shapeType) ? item.shapeType === currentShapType && settingsOpen : undefined"
         :disabled="busy" @click="clickAppliance(item.shapeType)">
         <span class="tool-icon" :style="{ maskImage: `url(&quot;${item.icon}&quot;)` }" aria-hidden="true"></span>
       </button>
@@ -11,8 +11,8 @@
         <img :src="clear" alt="" />
       </button>
     </div>
-    <BrushSettings v-if="settingsOpen && (currentShapType === 'pencil' || currentShapType === 'eraser')"
-      :model-value="settings" :eraser="currentShapType === 'eraser'" @update:model-value="updateSettings" />
+    <BrushSettings v-if="settingsOpen && hasSettings(currentShapType)"
+      :model-value="settings" :tool="currentShapType" @update:model-value="updateSettings" />
   </div>
 </template>
 <script setup lang="ts">
@@ -37,6 +37,10 @@ const settings = ref(readBrushSettings());
 const settingsOpen = ref(false);
 const busy = ref(false);
 const toolbarRoot = ref<HTMLElement | null>(null);
+function hasSettings(type: DrawingTool) {
+  return type === 'pencil' || type === 'line' || type === 'arrow' ||
+    type === 'rectangle' || type === 'circle' || type === 'triangle' || type === 'ellipse';
+}
 function updateSettings(value: BrushOptions) { canvas?.value?.setBrushSettings(value); }
 
 function onPointerDown(event: PointerEvent) {
@@ -122,15 +126,15 @@ const tools = ref<Appliance[]>([{
     shapeType: "arrow",
 }])
 
-const currentShapType = ref<string>("pencil");
+const currentShapType = ref<DrawingTool>("pencil");
 
 function clickAppliance(type: DrawingTool) {
     if (type === currentShapType.value) {
-      if (type === 'pencil' || type === 'eraser') settingsOpen.value = !settingsOpen.value;
+      if (hasSettings(type)) settingsOpen.value = !settingsOpen.value;
       return;
     }
     canvas?.value?.setDrawingTool(type)
-    settingsOpen.value = type === 'pencil' || type === 'eraser';
+    settingsOpen.value = hasSettings(type);
 }
 
 function clickClear() {

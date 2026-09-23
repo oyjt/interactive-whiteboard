@@ -133,13 +133,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.settings = normalizeBrushSettings(settings);
     this.options.stroke = this.settings.color;
     this.options.strokeWidth = this.settings.width;
-    if (this.canvas.freeDrawingBrush) {
-      if (this.drawingTool === "pencil") {
-        this.canvas.freeDrawingBrush.color = this.settings.color;
-        this.canvas.freeDrawingBrush.width = this.settings.width;
-      } else if (this.drawingTool === "eraser") {
-        this.canvas.freeDrawingBrush.width = this.settings.eraserWidth;
-      }
+    if (this.drawingTool === "pencil" && this.canvas.freeDrawingBrush) {
+      this.canvas.freeDrawingBrush.color = this.settings.color;
+      this.canvas.freeDrawingBrush.width = this.settings.width;
     }
     saveBrushSettings(this.settings);
     this.emit("settings:changed", this.getBrushSettings());
@@ -515,7 +511,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   public eraser(options?: { width?: number }): void {
     const eraser = new EraserBrush(this.canvas);
     if (options?.width) eraser.width = options.width;
-    else eraser.width = this.settings.eraserWidth;
+    else eraser.width = 20;
 
     this.canvas.freeDrawingBrush = eraser;
     this.canvas.freeDrawingCursor = "default";
