@@ -1,18 +1,18 @@
 <template>
-  <div class="whiteboard-annex-box">
-    <button aria-label="首页" :disabled="isFirst()" @click="setFirstStep" class="whiteboard-annex-arrow">
+  <div class="whiteboard-annex-box flex h-6 select-none items-center justify-center bg-white">
+    <button aria-label="首页" :disabled="isFirst()" @click="setFirstStep" class="whiteboard-annex-arrow flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200">
       <img :src="isFirst() ? firstDisabled : first" alt="first" />
     </button>
-    <button aria-label="上一页" :disabled="isFirst()" @click="handlePptPreviousStep" class="whiteboard-annex-arrow">
+    <button aria-label="上一页" :disabled="isFirst()" @click="handlePptPreviousStep" class="whiteboard-annex-arrow flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200">
       <img :src="isFirst() ? backDisabled : back" alt="back" />
     </button>
-    <div class="whiteboard-annex-arrow-page">
+    <div class="whiteboard-annex-arrow-page mx-2 text-[#212324]">
       {{activeIndex + 1}} / {{scenes.length}}
     </div>
-    <button aria-label="下一页" :disabled="isLast()" @click="handlePptNextStep" class="whiteboard-annex-arrow">
+    <button aria-label="下一页" :disabled="isLast()" @click="handlePptNextStep" class="whiteboard-annex-arrow flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200">
       <img :src="isLast() ? nextDisabled : next" alt="next" />
     </button>
-    <button aria-label="末页" :disabled="isLast()" @click="setLastStep" class="whiteboard-annex-arrow">
+    <button aria-label="末页" :disabled="isLast()" @click="setLastStep" class="whiteboard-annex-arrow flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200">
       <img :src="isLast() ? lastDisabled : last" alt="last" />
     </button>
   </div>
@@ -49,9 +49,3 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => events.forEach(event => board.off(event, update)));
 }, { immediate: true });
 </script>
-<style>
-@reference "tailwindcss";
-.whiteboard-annex-box { @apply flex h-6 select-none items-center justify-center bg-white; }
-.whiteboard-annex-arrow { @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200; }
-.whiteboard-annex-arrow-page { @apply mx-2 text-[#212324]; }
-</style>

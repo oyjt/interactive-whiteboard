@@ -8,7 +8,7 @@
 - 单击输入文字只显示光标，拖动时指定文字区域；橡皮擦拖动先使对象变灰，松开后删除，并显示短暂轨迹。
 - 撤销/重做、对象复制粘贴、键盘移动、删除及 PNG 导出。
 - 内置 JPEG 课件翻页，每页分别保存批注和撤销历史；课件并非 PPTX 解析。
-- 页面下方的同步预览：默认同页本地预览，配置 WebSocket 后由独立连接接收服务端转发的压缩快照。
+- 页面下方的同步预览：通过 gzip、Base64 编码和解码模拟传输，再恢复到第二块画布。
 
 ## 启动
 
@@ -19,28 +19,19 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-默认运行方式无需后端。打开 Vite 显示的页面即可编辑；白板内容只在当前会话内存中，刷新前请导出 PNG。
+无需后端。打开 Vite 显示的页面即可编辑；白板内容只在当前会话内存中，刷新前请导出 PNG。
 
-### WebSocket 同步预览
+### 同步预览的模拟链路
 
-分别打开两个终端运行：
+主画布在内容提交、撤销或翻页后生成 Fabric JSON，模拟下列传输流程：
 
-```sh
-pnpm sync:server
-VITE_WHITEBOARD_WS_URL=ws://127.0.0.1:8787/sync pnpm dev
+```text
+主画布 JSON → gzip → Base64 字符串 → Base64 解码 → ungzip → 预览画布加载 JSON
 ```
 
-Windows PowerShell 第二条命令可写为：
+模拟函数位于 `src/utils/previewSync.ts`，在发送与接收两处留有注释，可作为将来接入真实 WebSocket 的位置。目前没有 WebSocket 服务、连接或消息接收代码；预览仅在同一个页面中模拟数据编码与恢复，不模拟网络延迟、断线或多人协作。仅在内容变更时更新，指针移动和橡皮擦拖影不会触发全量同步。
 
-```powershell
-$env:VITE_WHITEBOARD_WS_URL='ws://127.0.0.1:8787/sync'; pnpm dev
-```
-
-页面下方显示 `WebSocket 已连接` 后再绘制。主画布和预览画布分别建立发布连接与接收连接，接收端**只加载服务端发回的数据**，无需 iframe。首次连接、绘制完成、文字提交、撤销或课件切换时发送完整 Fabric JSON 快照：先 gzip 压缩，再用 WebSocket 二进制帧传输，无需 Base64。画笔移动过程中的临时轨迹不会发送。预览按顺序加载最新快照；断线后自动重连并重新发送当前内容。
-
-URL 增加 `?room=lesson1` 可以区分演示房间；同一房间只允许一个主画布发布，新发布者会替换前一位。服务默认绑定本机 `127.0.0.1:8787`，单条消息最大 2 MiB，最多创建 20 个房间，最新快照仅存在服务内存里。跨设备访问需把中继服务部署到可访问的地址，并在构建页面时配置 `VITE_WHITEBOARD_WS_URL`；HTTPS 页面必须使用 `wss://`。GitHub Pages 只托管静态文件，默认构建走本地预览，并不运行 WebSocket 中继。
-
-当前页面同时充当发布端与本页预览端，第二个编辑页面进入相同房间会替换原发布者；独立学生端还需实现只读的 `preview` 客户端。中继没有账户权限、持久化或并发编辑合并。公开服务需要先加入鉴权、房间权限和持久化；多人同时编辑需要另行设计对象操作协议和冲突处理。
+样式入口位于 `src/styles/index.css`。页面和工具栏优先在 Vue 模板内使用 Tailwind 类；课件预览面板等具有特殊布局的区域保留局部原生 CSS。组件私有图标与组件就近存放，课件和画布通用素材放在 `src/assets/`。
 
 ## 操作
 
@@ -59,6 +50,6 @@ pnpm exec playwright install chromium --only-shell
 pnpm test:browser
 ```
 
-`test` 覆盖历史、设置、箭头序列化和 WebSocket 中继；`test:browser` 会启动 Vite 和临时中继，验证真实浏览器绘制、压缩同步、断线重连、课件与导出。CI 在 Node 24 上运行这些检查。TypeScript 暂固定 5.9.3，因为当前 vue-tsc 版本尚不能加载 TypeScript 7 的内部入口。
+`test` 覆盖历史、设置、箭头序列化和 gzip/Base64 模拟往返；`test:browser` 启动 Vite，验证实际绘制、预览同步、课件与导出。CI 在 Node 24 上运行这些检查。TypeScript 暂固定 5.9.3，因为当前 vue-tsc 版本尚不能加载 TypeScript 7 的内部入口。
 
 代码入口见 [AGENT.md](AGENT.md)，历史调整记录见 [调整清单](docs/adjustment-plan.md)。

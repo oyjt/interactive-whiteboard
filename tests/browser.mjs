@@ -1,13 +1,8 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
-import { once } from 'node:events';
-import { startSyncServer } from '../server/sync.mjs';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
-const relay = startSyncServer({ port: 0 });
-await once(relay, 'listening');
-process.env.VITE_WHITEBOARD_WS_URL = `ws://127.0.0.1:${relay.address().port}/sync`;
 const server = await createServer({root:fileURLToPath(new URL('..', import.meta.url)),server:{host:'127.0.0.1',port:5173,strictPort:true}});
 await server.listen();
 const browser = await chromium.launch({headless:true, executablePath:process.env.CHROMIUM_EXECUTABLE, args:JSON.parse(process.env.CHROMIUM_ARGS || '[]')});
@@ -26,7 +21,7 @@ async function draw(x=400,y=120,dx=140,dy=40){
 try {
 await page.goto('http://127.0.0.1:5173/interactive-whiteboard/');
 await page.waitForSelector('.upper-canvas');
-await page.getByText('WebSocket 已连接').waitFor();
+await page.getByText('gzip / Base64 本地模拟 · 内容变更后更新').waitFor();
 assert.equal(await page.locator('.tool-mid-box-left').evaluate(el=>getComputedStyle(el).flexDirection),'column');
 assert.equal(await page.getByRole('button',{name:'切换工具设置'}).count(),0);
 assert.notEqual(await page.getByRole('button',{name:'笔',exact:true}).locator('.tool-icon').evaluate(el=>getComputedStyle(el).maskImage),'none');
@@ -131,15 +126,12 @@ const arrowPixels=await board(b=>[[523,180],[524,175]].map(([x,y])=>b.getCanvas(
 assert.ok(arrowPixels[0]<40 && arrowPixels[1]>128,'箭头尖应是开放的两条线，不含三角形底边');
 assert.equal(await board(b=>b.getObjects()[0].constructor.type),'Arrow');
 await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects()[0]?.constructor.type==='Arrow');
-for (const socket of relay.clients) socket.terminate();
-await page.getByText('WebSocket 断开，正在重连').waitFor();
-await page.getByText('WebSocket 已连接').waitFor();
-await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects()[0]?.constructor.type==='Arrow');
 await page.getByRole('button',{name:'撤销',exact:true}).click();await count(0);await idle();
+await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects().length===0);
 await page.getByRole('button',{name:'重做',exact:true}).click();await count(1);await idle();
 assert.equal(await board(b=>b.getObjects()[0].constructor.type),'Arrow');
 assert.equal(await board(b=>b.getObjects()[0].erasable),true);
-console.log('PASS arrow and erasable serialization in history and WebSocket mirror after reconnect');
+console.log('PASS arrow and erasable serialization in history and encoded preview');
 await page.getByRole('button',{name:'橡皮擦',exact:true}).click();
 canvasBox=await page.locator('.upper-canvas').boundingBox();
 await page.mouse.move(canvasBox.x+405,canvasBox.y+185);await page.mouse.down();
@@ -203,4 +195,4 @@ await page.waitForTimeout(100);
 assert.deepEqual(errors,[]);
 console.log('PASS unmount cleanup');
 console.log('ALL BROWSER CHECKS PASSED');
-} finally {await browser.close();await server.close();await new Promise(resolve=>relay.close(resolve));}
+} finally {await browser.close();await server.close();}

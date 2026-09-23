@@ -1,16 +1,16 @@
 <template>
-    <div class="scale-controller-box">
-        <div class="scale-controller-btn" @click="rSet">
+    <div class="scale-controller-box flex h-8 select-none items-center justify-center rounded bg-white text-xs shadow-md">
+        <div class="scale-controller-btn mx-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200" @click="rSet">
             <img :src="reset" alt="重置" />
         </div>
-        <div class="scale-controller-cut-line" />
-        <div class="scale-controller-btn" @click="small">
+        <div class="scale-controller-cut-line h-5 w-px bg-gray-200" />
+        <div class="scale-controller-btn mx-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200" @click="small">
             <img :src="less" alt="缩小" />
         </div>
         <div>
-            {{zoomRatio}} <span style="opacity: 0.6">%</span>
+            {{zoomRatio}} <span class="opacity-60">%</span>
         </div>
-        <div class="scale-controller-btn" @click="big">
+        <div class="scale-controller-btn mx-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200" @click="big">
             <img :src="plus" alt="放大" />
         </div>
     </div>
@@ -38,9 +38,3 @@ function small() {
     zoomRatio.value = Math.floor((canvas?.value.getZoom() as number) * 100);
 }
 </script>
-<style scoped>
-@reference "tailwindcss";
-.scale-controller-box { @apply flex h-8 select-none items-center justify-center rounded bg-white text-xs shadow-md; }
-.scale-controller-btn { @apply mx-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200; }
-.scale-controller-cut-line { @apply h-5 w-px bg-gray-200; }
-</style>

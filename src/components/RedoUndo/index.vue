@@ -1,9 +1,9 @@
 <template>
-  <div class="redo-undo">
-    <button class="redo-undo-controller-btn" aria-label="撤销" :disabled="!state.canUndo" @click="canvas?.undo()">
+  <div class="redo-undo flex h-8 w-[60px] cursor-pointer select-none items-center justify-center rounded bg-white text-xs shadow-md">
+    <button class="redo-undo-controller-btn mx-0.5 flex h-6 w-6 items-center justify-center rounded-sm hover:bg-gray-200" aria-label="撤销" :disabled="!state.canUndo" @click="canvas?.undo()">
       <img :src="state.canUndo ? undo : undoDisabled" alt="" />
     </button>
-    <button class="redo-undo-controller-btn" aria-label="重做" :disabled="!state.canRedo" @click="canvas?.redo()">
+    <button class="redo-undo-controller-btn mx-0.5 flex h-6 w-6 items-center justify-center rounded-sm hover:bg-gray-200" aria-label="重做" :disabled="!state.canRedo" @click="canvas?.redo()">
       <img :src="state.canRedo ? redo : redoDisabled" alt="" />
     </button>
   </div>
@@ -25,8 +25,3 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => board.off('history:changed', update));
 }, { immediate: true });
 </script>
-<style>
-@reference "tailwindcss";
-.redo-undo { @apply flex h-8 w-[60px] cursor-pointer select-none items-center justify-center rounded bg-white text-xs shadow-md; }
-.redo-undo-controller-btn { @apply mx-0.5 flex h-6 w-6 items-center justify-center rounded-sm hover:bg-gray-200; }
-</style>

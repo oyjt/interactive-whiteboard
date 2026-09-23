@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "sync:server": "node server/sync.mjs",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test tests/core.test.mjs tests/sync.test.mjs",
+    "test": "node --test tests/core.test.mjs tests/preview.test.mjs",
     "test:browser": "node tests/browser.mjs"
   },
   "dependencies": {
@@ -16,8 +15,7 @@
     "hotkeys-js": "^4.0.8",
     "mitt": "^3.0.1",
     "pako": "^3.0.2",
-    "vue": "^3.5.43",
-    "ws": "^8.21.3"
+    "vue": "^3.5.43"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

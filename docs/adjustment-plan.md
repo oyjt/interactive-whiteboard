@@ -52,8 +52,8 @@
 ## 第二阶段：同步与结构
 
 - [x] Fabric 7.4、Vite 8 与 Tailwind CSS v4 集成，保留 Fabric 6 的左上角绘制坐标；TypeScript 暂保留与 vue-tsc 相容的 5.9.3。
-- [x] 提取浏览器 WebSocket 同步模块；预览通过独立接收连接加载 gzip 二进制快照，无需 iframe。
-- [x] 保留无后端时的本地预览；WebSocket 断线提示并自动重连。
+- [x] 采用 gzip / Base64 编码与解码的本地同步模拟，注释标明未来的发送和接收位置；无需 iframe 或 WebSocket 服务。
+- [x] 将 Tailwind 实用类内联到 Vue 模板；全局入口整理到 `src/styles/index.css`。
 - [x] 清理未使用的图像，组件私有 SVG 就近存放，共享素材放在 `src/assets`。
 - [x] 完善面向用户的 README 与面向 AI agent 的 AGENT.md。
 - [ ] 多人编辑、认证、权限、持久化与增量同步另行设计，不属于单发布者预览演示。

@@ -1,14 +1,14 @@
 <template>
-  <div ref="toolbarRoot" class="tools-layout">
-    <div class="tool-mid-box-left" role="toolbar" aria-label="绘图工具">
-      <button v-for="(item, index) in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left"
+  <div ref="toolbarRoot" class="tools-layout flex items-center gap-2">
+    <div class="tool-mid-box-left flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md" role="toolbar" aria-label="绘图工具">
+      <button v-for="(item, index) in tools" :key="item.shapeType" type="button" class="tool-box-cell-box-left h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:bg-blue-50 aria-pressed:text-[#2563eb]"
         :title="`${item.name} (${index + 1})`" :aria-label="item.name" :aria-pressed="item.shapeType === currentShapType"
         :aria-expanded="hasSettings(item.shapeType) ? item.shapeType === currentShapType && settingsOpen : undefined"
         :disabled="busy" @click="clickAppliance(item.shapeType)">
-        <span class="tool-icon" :style="{ maskImage: `url(&quot;${item.icon}&quot;)` }" aria-hidden="true"></span>
+        <span class="tool-icon block h-6 w-6 bg-current" :style="{ maskImage: `url(&quot;${item.icon}&quot;)` }" aria-hidden="true"></span>
       </button>
-      <button type="button" class="tool-box-cell-box-left" title="清除批注（保留背景）" aria-label="清除批注" :disabled="busy" @click="clickClear">
-        <img :src="clear" alt="" />
+      <button type="button" class="tool-box-cell-box-left h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50" title="清除批注（保留背景）" aria-label="清除批注" :disabled="busy" @click="clickClear">
+        <img class="h-6 w-6" :src="clear" alt="" />
       </button>
     </div>
     <BrushSettings v-if="settingsOpen && hasSettings(currentShapType)"
@@ -144,12 +144,5 @@ function clickClear() {
 }
 </script>
 <style scoped>
-@reference "tailwindcss";
-.tools-layout { @apply flex items-center gap-2; }
-.tool-mid-box-left { @apply flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md; }
-.tool-box-cell-box-left { @apply h-8 w-8 shrink-0 rounded p-1 text-[#444e60]; }
-.tool-box-cell-box-left img { @apply h-6 w-6; }
-.tool-icon { @apply block h-6 w-6 bg-current; mask: center / contain no-repeat; }
-.tool-box-cell-box-left:hover, .tool-box-cell-box-left[aria-pressed=true] { @apply bg-blue-50; }
-.tool-box-cell-box-left[aria-pressed=true] { color: #2563eb; }
+.tool-icon { mask: center / contain no-repeat; }
 </style>

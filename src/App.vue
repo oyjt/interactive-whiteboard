@@ -1,31 +1,31 @@
 <template>
-  <main class="whiteboard-app">
-    <header class="app-header">
-      <div><h1>互动白板</h1><p>记录想法，自由书写</p></div>
-      <div class="header-actions">
-        <button :disabled="busy" @click="insertPPT">打开示例课件</button>
-        <button :disabled="busy" @click="exportPNG">导出 PNG</button>
+  <main class="whiteboard-app mx-auto max-w-[850px] p-6 max-[600px]:p-3">
+    <header class="app-header mb-5 flex items-center justify-between gap-3 max-[600px]:items-start">
+      <div><h1 class="text-[22px] tracking-[-.5px]">互动白板</h1><p class="mt-1 text-xs text-slate-500">记录想法，自由书写</p></div>
+      <div class="header-actions flex gap-2 max-[600px]:flex-wrap max-[600px]:justify-end">
+        <button class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" :disabled="busy" @click="insertPPT">打开示例课件</button>
+        <button class="rounded-lg border border-[#2563eb] bg-[#2563eb] px-3 py-2 text-xs text-white" :disabled="busy" @click="exportPNG">导出 PNG</button>
       </div>
     </header>
-    <p v-if="error" class="error-message" role="alert">{{ error }} <button @click="error = ''">关闭</button></p>
-    <div class="canvas-scroll">
-      <div class="canvas-wrap">
-        <div class="tool-box-out"><ToolBox /></div>
-        <div class="redo-undo-box"><RedoUndo /></div>
-        <div class="zoom-controller-box"><ZoomController /></div>
-        <div v-show="hasScenes" class="page-controller-box">
+    <p v-if="error" class="error-message rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700" role="alert">{{ error }} <button @click="error = ''">关闭</button></p>
+    <div class="canvas-scroll overflow-x-auto p-0.5">
+      <div class="canvas-wrap relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white">
+        <div class="tool-box-out absolute top-1/2 left-2 z-[3] -translate-y-1/2"><ToolBox /></div>
+        <div class="redo-undo-box absolute bottom-2 left-2 z-[3]"><RedoUndo /></div>
+        <div class="zoom-controller-box absolute bottom-2 left-[76px] z-[3]"><ZoomController /></div>
+        <div v-show="hasScenes" class="page-controller-box absolute right-2 bottom-2 z-[3] flex items-center rounded bg-white p-1">
           <PageController />
-          <button aria-label="页面预览" @click="isPreviewShow = !isPreviewShow"><img :src="pages" alt="" /></button>
+          <button aria-label="页面预览" @click="isPreviewShow = !isPreviewShow"><img class="h-6 w-6" :src="pages" alt="" /></button>
         </div>
-        <div v-if="hasScenes && isPreviewShow" class="preview-controller-box">
+        <div v-if="hasScenes && isPreviewShow" class="preview-controller-box absolute top-0 right-0 z-[4] h-full w-60 shadow-lg">
           <PreviewController @handle-preview-state="isPreviewShow = $event" />
         </div>
         <canvas id="canvas" width="800" height="450"></canvas>
       </div>
-      <div class="mirror-heading">同步预览 <span>{{ syncStatus }}</span></div>
-      <div class="canvas-wrap mirror-wrap"><canvas id="canvas2" width="800" height="450"></canvas></div>
+      <div class="mirror-heading mt-5 mb-2 text-[13px]">同步预览 <span class="ml-2 text-[11px] text-slate-400">gzip / Base64 本地模拟 · 内容变更后更新</span></div>
+      <div class="canvas-wrap mirror-wrap relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white"><canvas id="canvas2" width="800" height="450"></canvas></div>
     </div>
-    <p class="usage-hint">画笔、图形和文字均可设置 · 文字拖拽指定宽度 · 橡皮擦松手删除对象</p>
+    <p class="usage-hint text-[11px] leading-[1.8] text-slate-500">画笔、图形和文字均可设置 · 文字拖拽指定宽度 · 橡皮擦松手删除对象</p>
   </main>
 </template>
 <script setup lang="ts">
@@ -38,7 +38,7 @@ import ZoomController from './components/ZoomController/index.vue';
 import PageController from './components/PageController/index.vue';
 import PreviewController from './components/PreviewController/index.vue';
 import pages from './assets/images/pages.svg';
-import { createBoardSync } from './services/boardSync';
+import { simulatePreviewTransport } from './utils/previewSync';
 
 const canvas = shallowRef<FabricCanvas>();
 provide('canvas', canvas);
@@ -46,13 +46,10 @@ const isPreviewShow = ref(false);
 const hasScenes = ref(false);
 const busy = ref(false);
 const error = ref('');
-const syncUrl = import.meta.env.VITE_WHITEBOARD_WS_URL as string | undefined;
-const syncStatus = ref(syncUrl ? '正在连接 WebSocket' : '本地预览 · 内容变更后更新');
 let mirror: StaticCanvas | undefined;
 let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
 let syncing: Promise<void> | undefined;
 let disposed = false;
-let sync: ReturnType<typeof createBoardSync> | undefined;
 
 function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
   pending = data;
@@ -71,9 +68,9 @@ function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
 
 function syncContent(snapshot?: ReturnType<FabricCanvas['toJSON']>) {
   if (!canvas.value || disposed) return;
-  const latest = snapshot ?? canvas.value.toJSON();
-  if (sync) sync.publish(latest);
-  else if (!syncUrl) renderPreview(latest);
+  try {
+    renderPreview(simulatePreviewTransport(snapshot ?? canvas.value.toJSON()));
+  } catch { error.value = '同步数据编码或解码失败，请重新编辑后重试。'; }
 }
 
 async function insertPPT() {
@@ -105,43 +102,12 @@ onMounted(() => {
   board.on('insert:images', () => { hasScenes.value = board.getScenes().length > 0; });
   board.on('history:changed', () => { busy.value = board.getHistoryState().busy; });
   board.on('error', (message: string) => { error.value = message; });
-  if (syncUrl) {
-    sync = createBoardSync(syncUrl, new URLSearchParams(location.search).get('room') || 'demo', {
-      receive: renderPreview,
-      status: message => { syncStatus.value = message; },
-      error: message => { error.value = message; },
-    });
-  }
   syncContent();
 });
 onBeforeUnmount(() => {
   disposed = true;
   pending = undefined;
-  sync?.dispose();
   void canvas.value?.destroy();
   void (syncing ?? Promise.resolve()).finally(() => mirror?.dispose());
 });
 </script>
-<style scoped>
-@reference "tailwindcss";
-.whiteboard-app { @apply mx-auto max-w-[850px] p-6; }
-.app-header { @apply mb-5 flex items-center justify-between gap-3; }
-h1 { @apply text-[22px] tracking-[-.5px]; }
-.app-header p { @apply mt-1 text-xs text-slate-500; }
-.header-actions { @apply flex gap-2; }
-.header-actions button { @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs; }
-.header-actions button:last-child { @apply border-blue-600 bg-blue-600 text-white; }
-.canvas-scroll { @apply overflow-x-auto p-0.5; }
-.canvas-wrap { @apply relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white; }
-.tool-box-out { @apply absolute top-1/2 left-2 z-[3] -translate-y-1/2; }
-.redo-undo-box { @apply absolute bottom-2 left-2 z-[3]; }
-.zoom-controller-box { @apply absolute bottom-2 left-[76px] z-[3]; }
-.page-controller-box { @apply absolute right-2 bottom-2 z-[3] flex items-center rounded bg-white p-1; }
-.page-controller-box img { @apply h-6 w-6; }
-.preview-controller-box { @apply absolute top-0 right-0 z-[4] h-full w-60 shadow-lg; }
-.mirror-heading { @apply mt-5 mb-2 text-[13px]; }
-.mirror-heading span { @apply ml-2 text-[11px] text-slate-400; }
-.usage-hint { @apply text-[11px] leading-[1.8] text-slate-500; }
-.error-message { @apply rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700; }
-@media (max-width: 600px) { .whiteboard-app { padding: 12px; } .app-header { align-items: flex-start; } .header-actions { flex-wrap: wrap; justify-content: flex-end; } }
-</style>
