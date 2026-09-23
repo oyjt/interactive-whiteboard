@@ -29,6 +29,7 @@ import Arrow from "./objects/Arrow";
 import initHotKeys from "./initHotKeys";
 import initControls from "./initControls";
 import initControlsRotate from "./initControlsRotate";
+const ERASER_TRAIL_MS = 420;
 /**
  * fabri方法封装
  * 使用示例：
@@ -108,6 +109,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private pendingText: IText | Textbox | null = null;
   private erasing = false;
   private erasureTargets = new Map<FabricObject, Pick<FabricObject, 'opacity' | 'stroke' | 'fill'>>();
+  private eraserTrail?: HTMLCanvasElement;
+  private eraserTrailPoints: Array<{ point: Point; time: number }> = [];
+  private eraserTrailFrame?: number;
   private options: ShapeOptions = {
     stroke: "#ff0000",
     strokeWidth: 5,
@@ -546,9 +550,69 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     if (changed) this.canvas.requestRenderAll();
   }
 
+  private updateEraserTrail(event: TPointerEvent) {
+    if (!this.eraserTrail) {
+      const overlay = document.createElement('canvas');
+      overlay.className = 'eraser-trail';
+      const width = this.canvas.upperCanvasEl.clientWidth;
+      const height = this.canvas.upperCanvasEl.clientHeight;
+      const ratio = window.devicePixelRatio || 1;
+      overlay.width = width * ratio;
+      overlay.height = height * ratio;
+      Object.assign(overlay.style, {
+        position: 'absolute', left: '0', top: '0',
+        width: `${width}px`, height: `${height}px`, pointerEvents: 'none', zIndex: '4',
+      });
+      this.canvas.wrapperEl.append(overlay);
+      this.eraserTrail = overlay;
+    }
+    this.eraserTrailPoints.push({ point: this.canvas.getViewportPoint(event), time: performance.now() });
+    this.eraserTrailPoints = this.eraserTrailPoints.slice(-24);
+    if (this.eraserTrailFrame === undefined) this.eraserTrailFrame = requestAnimationFrame(this.renderEraserTrail);
+  }
+
+  private renderEraserTrail = () => {
+    this.eraserTrailFrame = undefined;
+    const canvas = this.eraserTrail;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const now = performance.now();
+    this.eraserTrailPoints = this.eraserTrailPoints.filter(({ time }) => now - time < ERASER_TRAIL_MS);
+    const ratio = window.devicePixelRatio || 1;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    ctx.strokeStyle = '#64748b';
+    ctx.fillStyle = '#64748b';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    for (let i = 1; i < this.eraserTrailPoints.length; i++) {
+      const previous = this.eraserTrailPoints[i - 1].point;
+      const current = this.eraserTrailPoints[i];
+      ctx.globalAlpha = 0.5 * (1 - (now - current.time) / ERASER_TRAIL_MS);
+      ctx.beginPath();
+      ctx.moveTo(previous.x, previous.y);
+      ctx.lineTo(current.point.x, current.point.y);
+      ctx.stroke();
+    }
+    const tip = this.eraserTrailPoints.at(-1);
+    if (tip) {
+      ctx.globalAlpha = 0.5 * (1 - (now - tip.time) / ERASER_TRAIL_MS);
+      ctx.beginPath();
+      ctx.arc(tip.point.x, tip.point.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      this.eraserTrailFrame = requestAnimationFrame(this.renderEraserTrail);
+    }
+    ctx.globalAlpha = 1;
+  };
+
   private finishErasing(remove: boolean) {
     if (!this.erasing) return;
     this.erasing = false;
+    if (this.eraserTrailFrame !== undefined) cancelAnimationFrame(this.eraserTrailFrame);
+    this.eraserTrailFrame = undefined;
+    this.eraserTrailPoints = [];
+    this.eraserTrail?.remove();
+    this.eraserTrail = undefined;
     for (const [object, appearance] of this.erasureTargets) {
       object.set(appearance);
       object.dirty = true;
@@ -658,6 +722,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     const { x, y } = event.pointer;
     if (this.drawingTool === 'eraser') {
       this.erasing = true;
+      this.updateEraserTrail(event.e);
       this.markErasure(new Point(x, y));
       return;
     }
@@ -697,6 +762,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   // 鼠标移动事件处理函数
   private onMouseMove(event: any) {
     if (this.erasing && event.pointer) {
+      this.updateEraserTrail(event.e);
       this.markErasure(new Point(event.pointer.x, event.pointer.y));
       return;
     }
