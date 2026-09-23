@@ -1,33 +1,72 @@
 <template>
   <main class="whiteboard-app">
-    <header class="app-header">
-      <div><h1>互动白板</h1><p>记录想法，自由书写</p></div>
-      <div class="header-actions">
-        <button :disabled="busy" @click="insertPPT">打开示例课件</button>
-        <button :disabled="busy" @click="exportPNG">导出 PNG</button>
-      </div>
-    </header>
-    <p v-if="error" class="error-message" role="alert">{{ error }} <button @click="error = ''">关闭</button></p>
-    <div class="canvas-scroll">
-      <div class="canvas-wrap">
-        <div class="tool-box-out"><ToolBox /></div>
-        <div class="redo-undo-box"><RedoUndo /></div>
-        <div class="zoom-controller-box"><ZoomController /></div>
-        <div v-show="hasScenes" class="page-controller-box">
-          <PageController />
-          <button aria-label="页面预览" @click="isPreviewShow = !isPreviewShow"><img :src="pages" alt="" /></button>
+    <div class="workspace-scroll">
+      <div class="workspace" @pointerdown="closeMenu">
+        <div class="top-left" @pointerdown.stop>
+          <button class="icon-button island" aria-label="主菜单" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <div v-if="menuOpen" class="main-menu island">
+            <strong>互动白板</strong>
+            <button :disabled="busy" @click="insertPPT">打开示例课件</button>
+            <button :disabled="busy" @click="exportPNG">导出 PNG</button>
+            <button :disabled="busy" class="danger-action" @click="clearAnnotations">清除批注</button>
+            <small>清除批注会保留课件背景，并且可以撤销。</small>
+          </div>
         </div>
-        <div v-if="hasScenes && isPreviewShow" class="preview-controller-box">
+
+        <div class="tool-box-out"><ToolBox /></div>
+
+        <div class="top-right">
+          <button class="action-button island" :aria-pressed="showMirror" @click="showMirror = !showMirror">
+            同步预览
+          </button>
+          <button class="action-button island primary-action" :disabled="busy" @click="exportPNG">导出</button>
+        </div>
+
+        <div class="canvas-shell">
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="800" height="450"></canvas>
+          </div>
+        </div>
+
+        <div class="bottom-left">
+          <RedoUndo />
+          <ZoomController />
+        </div>
+
+        <div v-show="hasScenes" class="page-controller-box island">
+          <PageController />
+          <span class="control-divider" />
+          <button class="small-button" aria-label="页面预览" :aria-pressed="isPreviewShow" @click="isPreviewShow = !isPreviewShow">
+            <img :src="pages" alt="" />
+          </button>
+        </div>
+
+        <div v-if="hasScenes && isPreviewShow" class="preview-controller-box island">
           <PreviewController @handle-preview-state="isPreviewShow = $event" />
         </div>
-        <canvas id="canvas" width="800" height="450"></canvas>
+
+        <aside v-show="showMirror" class="mirror-panel island">
+          <div class="panel-heading">
+            <span>同步预览</span>
+            <button aria-label="关闭同步预览" @click="showMirror = false">×</button>
+          </div>
+          <div class="mirror-canvas"><canvas id="canvas2" width="800" height="450"></canvas></div>
+          <p>仅在内容提交后更新</p>
+        </aside>
+
+        <div class="shortcut-hint island">按 1–8、0 切换工具 · Esc 返回选择</div>
+
+        <div v-if="error" class="error-message island" role="alert">
+          <span>{{ error }}</span>
+          <button aria-label="关闭错误提示" @click="error = ''">×</button>
+        </div>
       </div>
-      <div class="mirror-heading">同步预览 <span>内容变更后更新</span></div>
-      <div class="canvas-wrap mirror-wrap"><canvas id="canvas2" width="800" height="450"></canvas></div>
     </div>
-    <p class="usage-hint">点击画笔或 ⚙ 调整颜色和尺寸 · 清除批注保留课件背景 · 画布聚焦时支持 Ctrl / ⌘ 快捷键</p>
   </main>
 </template>
+
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, provide, ref, shallowRef } from 'vue';
 import { StaticCanvas } from 'fabric';
@@ -41,7 +80,9 @@ import pages from './assets/images/pages.svg';
 
 const canvas = shallowRef<FabricCanvas>();
 provide('canvas', canvas);
+const menuOpen = ref(false);
 const isPreviewShow = ref(false);
+const showMirror = ref(false);
 const hasScenes = ref(false);
 const busy = ref(false);
 const error = ref('');
@@ -49,6 +90,10 @@ let mirror: StaticCanvas | undefined;
 let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
 let syncing: Promise<void> | undefined;
 let disposed = false;
+
+function closeMenu() {
+  menuOpen.value = false;
+}
 
 function syncContent() {
   if (!canvas.value || disposed) return;
@@ -61,19 +106,32 @@ function syncContent() {
       try {
         await mirror.loadFromJSON(data);
         if (!disposed) mirror.requestRenderAll();
-      } catch { if (!disposed) error.value = '同步预览加载失败，请重新编辑后重试。'; }
+      } catch {
+        if (!disposed) error.value = '同步预览加载失败，请重新编辑后重试。';
+      }
     }
   })().finally(() => { syncing = undefined; });
 }
 
 async function insertPPT() {
   if (!hasScenes.value && canvas.value?.getObjects().length && !window.confirm('打开课件会替换当前白板，请先导出需要保留的内容。继续？')) return;
+  menuOpen.value = false;
   error.value = '';
   const images = import.meta.glob('@/assets/ppt/*.jpeg', { eager: true, import: 'default' });
-  await canvas.value?.insertPPT(Object.entries(images).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([, url]) => url as string));
+  await canvas.value?.insertPPT(
+    Object.entries(images)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([, url]) => url as string),
+  );
+}
+
+function clearAnnotations() {
+  menuOpen.value = false;
+  canvas.value?.clearCanvas();
 }
 
 function exportPNG() {
+  menuOpen.value = false;
   const board = canvas.value?.getCanvas();
   if (!board || busy.value) return;
   const transform = [...board.viewportTransform] as typeof board.viewportTransform;
@@ -83,8 +141,12 @@ function exportPNG() {
     link.download = `白板-${(canvas.value?.getCurrentScene() ?? 0) + 1}.png`;
     link.href = board.toDataURL({ format: 'png', multiplier: 2 });
     link.click();
-  } catch { error.value = '导出失败，请检查图片是否允许跨域访问。'; }
-  finally { board.setViewportTransform(transform); board.requestRenderAll(); }
+  } catch {
+    error.value = '导出失败，请检查图片是否允许跨域访问。';
+  } finally {
+    board.setViewportTransform(transform);
+    board.requestRenderAll();
+  }
 }
 
 onMounted(() => {
@@ -97,6 +159,7 @@ onMounted(() => {
   board.on('error', (message: string) => { error.value = message; });
   syncContent();
 });
+
 onBeforeUnmount(() => {
   disposed = true;
   pending = undefined;
@@ -104,25 +167,45 @@ onBeforeUnmount(() => {
   void (syncing ?? Promise.resolve()).finally(() => mirror?.dispose());
 });
 </script>
+
 <style scoped>
-.whiteboard-app { max-width: 850px; margin: 0 auto; padding: 24px; }
-.app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; }
-h1 { font-size: 22px; margin: 0; letter-spacing: -.5px; }
-.app-header p { font-size: 12px; color: #64748b; margin: 4px 0 0; }
-.header-actions { display: flex; gap: 8px; }
-.header-actions button { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; background: white; }
-.header-actions button:last-child { color: white; background: #2563eb; border-color: #2563eb; }
-.canvas-scroll { overflow-x: auto; padding: 2px; }
-.canvas-wrap { position: relative; width: 800px; height: 450px; background: white; border: 1px solid #dbe3ee; border-radius: 8px; overflow: hidden; }
-.tool-box-out { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 3; }
-.redo-undo-box { position: absolute; bottom: 8px; left: 8px; z-index: 3; }
-.zoom-controller-box { position: absolute; bottom: 8px; left: 76px; z-index: 3; }
-.page-controller-box { position: absolute; bottom: 8px; right: 8px; z-index: 3; display: flex; align-items: center; background: white; padding: 4px; border-radius: 4px; }
-.page-controller-box img { width: 24px; height: 24px; }
-.preview-controller-box { position: absolute; right: 0; top: 0; width: 240px; height: 100%; z-index: 4; box-shadow: 0 4px 12px #0002; }
-.mirror-heading { font-size: 13px; margin: 20px 0 8px; }
-.mirror-heading span { color: #94a3b8; font-size: 11px; margin-left: 8px; }
-.usage-hint { font-size: 11px; color: #64748b; line-height: 1.8; }
-.error-message { padding: 10px; border-radius: 6px; background: #fff1f2; color: #be123c; font-size: 13px; }
-@media (max-width: 600px) { .whiteboard-app { padding: 12px; } .app-header { align-items: flex-start; } .header-actions { flex-wrap: wrap; justify-content: flex-end; } }
+.whiteboard-app { min-height: 100dvh; background: var(--color-workspace); }
+.workspace-scroll { min-height: 100dvh; overflow: auto; }
+.workspace { position: relative; width: max(100%, 880px); min-height: 610px; height: 100dvh; overflow: hidden; }
+.canvas-shell { width: 800px; margin: 88px auto 0; }
+.canvas-wrap { position: relative; width: 800px; height: 450px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 3px; background: #fff; box-shadow: 0 1px 2px #0000000f; }
+.tool-box-out { position: absolute; top: 16px; left: 50%; z-index: 10; transform: translateX(-50%); }
+.top-left { position: absolute; top: 16px; left: 16px; z-index: 12; }
+.top-right { position: absolute; top: 16px; right: 16px; z-index: 10; display: flex; gap: 8px; }
+.island { box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); box-shadow: var(--shadow-island); }
+.icon-button { display: grid; width: 44px; height: 44px; place-items: center; font-size: 20px; }
+.icon-button:hover, .action-button:hover, .small-button:hover { background: var(--color-button-hover); }
+.main-menu { position: absolute; top: 52px; left: 0; display: flex; width: 220px; flex-direction: column; padding: 8px; }
+.main-menu strong { padding: 8px 10px 12px; font-size: 14px; }
+.main-menu button { padding: 9px 10px; border-radius: 7px; text-align: left; }
+.main-menu button:hover { background: var(--color-button-hover); }
+.main-menu small { padding: 10px; color: var(--color-text-muted); font-size: 10px; line-height: 1.5; }
+.danger-action { color: #c92a2a; }
+.action-button { height: 44px; padding: 0 14px; font-size: 12px; }
+.action-button[aria-pressed=true] { background: var(--color-primary-light); color: var(--color-primary); }
+.primary-action { border-color: var(--color-primary); background: var(--color-primary); color: #fff; box-shadow: none; }
+.primary-action:hover { background: #5f3dc4; }
+.bottom-left { position: absolute; bottom: 16px; left: 16px; z-index: 8; display: flex; align-items: center; gap: 8px; }
+.page-controller-box { position: absolute; bottom: 16px; left: 50%; z-index: 8; display: flex; height: 40px; align-items: center; padding: 7px; transform: translateX(-50%); }
+.control-divider { width: 1px; height: 22px; margin: 0 4px; background: var(--color-border); }
+.small-button { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 7px; }
+.small-button[aria-pressed=true] { background: var(--color-primary-light); }
+.small-button img { width: 20px; height: 20px; }
+.preview-controller-box { position: absolute; top: 72px; right: 16px; z-index: 11; width: 240px; height: 450px; overflow: hidden; }
+.mirror-panel { position: absolute; top: 72px; right: 16px; z-index: 10; width: 344px; padding: 12px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 12px; font-weight: 600; }
+.panel-heading button, .error-message button { width: 24px; height: 24px; border-radius: 6px; font-size: 18px; }
+.mirror-canvas { width: 320px; height: 180px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 5px; background: #fff; }
+.mirror-canvas :deep(canvas) { width: 320px !important; height: 180px !important; }
+.mirror-panel p { margin: 8px 0 0; color: var(--color-text-muted); font-size: 10px; }
+.shortcut-hint { position: absolute; right: 16px; bottom: 16px; padding: 8px 10px; color: var(--color-text-muted); font-size: 10px; }
+.error-message { position: absolute; bottom: 64px; left: 50%; z-index: 20; display: flex; max-width: 460px; align-items: center; gap: 12px; padding: 10px 12px; color: #c92a2a; font-size: 12px; transform: translateX(-50%); }
+@media (max-height: 620px) {
+  .workspace { height: 620px; }
+}
 </style>

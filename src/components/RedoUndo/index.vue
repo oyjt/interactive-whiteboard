@@ -25,33 +25,29 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => board.off('history:changed', update));
 }, { immediate: true });
 </script>
-<style lang="scss">
+<style scoped>
 .redo-undo {
-  height: 32px;
-  width: 60px;
-  background-color: white;
+  height: 40px;
+  padding: 4px;
+  background: var(--color-surface);
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   user-select: none;
-  font-size: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-island);
 }
 
 .redo-undo-controller-btn {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 2px;
-  margin-left: 2px;
-  margin-right: 2px;
+  border-radius: 7px;
 
   &:hover {
-    background: rgba(33, 35, 36, 0.1);
+    background: var(--color-button-hover);
   }
 }
 </style>

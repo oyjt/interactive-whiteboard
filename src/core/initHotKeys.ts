@@ -5,6 +5,7 @@ interface Actions {
   changed: () => void;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
+  selectTool: (tool: 'select' | 'rectangle' | 'circle' | 'triangle' | 'arrow' | 'line' | 'pencil' | 'text' | 'eraser') => void;
   isBusy: () => boolean;
   error: () => void;
 }
@@ -49,6 +50,15 @@ export default function initHotkeys(canvas: Canvas, actions: Actions) {
   });
   bind('ctrl+z,command+z', actions.undo);
   bind('ctrl+y,ctrl+shift+z,command+shift+z', actions.redo);
+  bind('1,v,escape', () => actions.selectTool('select'));
+  bind('2,r', () => actions.selectTool('rectangle'));
+  bind('3,o', () => actions.selectTool('circle'));
+  bind('4', () => actions.selectTool('triangle'));
+  bind('5,a', () => actions.selectTool('arrow'));
+  bind('6,l', () => actions.selectTool('line'));
+  bind('7,p', () => actions.selectTool('pencil'));
+  bind('8,t', () => actions.selectTool('text'));
+  bind('0,e', () => actions.selectTool('eraser'));
   bind('ctrl+c,command+c', async () => {
     const object = canvas.getActiveObject();
     if (object) { clipboard = await object.clone(); offset = 0; }

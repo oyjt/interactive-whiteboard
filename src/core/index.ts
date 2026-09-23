@@ -215,6 +215,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.cleanupHotkeys = initHotKeys(this.canvas, {
       changed: () => this.commit(),
       undo: () => this.undo(), redo: () => this.redo(),
+      selectTool: tool => this.setDrawingTool(tool),
       isBusy: () => this.busy || this.disposed,
       error: () => this.emit("error", "复制或粘贴失败，请重试。"),
     });
