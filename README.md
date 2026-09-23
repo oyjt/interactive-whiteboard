@@ -31,7 +31,7 @@ pnpm dev
 
 模拟函数位于 `src/utils/previewSync.ts`，在发送与接收两处留有注释，可作为将来接入真实 WebSocket 的位置。目前没有 WebSocket 服务、连接或消息接收代码；预览仅在同一个页面中模拟数据编码与恢复，不模拟网络延迟、断线或多人协作。仅在内容变更时更新，指针移动和橡皮擦拖影不会触发全量同步。
 
-样式入口位于 `src/styles/index.css`。页面和工具栏优先在 Vue 模板内使用 Tailwind 类；课件预览面板等具有特殊布局的区域保留局部原生 CSS。组件私有图标与组件就近存放，课件和画布通用素材放在 `src/assets/`。
+样式入口位于 `src/styles/index.css`。页面和工具栏优先在 Vue 模板内使用 Tailwind 类；课件预览面板等具有特殊布局的区域保留局部原生 CSS。组件专用图标与组件就近存放，课件和画布通用素材放在 `src/assets/`；Vite 与 Vue 声明集中在 `src/types/`。
 
 ## 操作
 
@@ -50,6 +50,8 @@ pnpm exec playwright install chromium --only-shell
 pnpm test:browser
 ```
 
+提交代码前还应运行 `pnpm lint`（Oxlint）和 `pnpm format:check`（Oxfmt）；`pnpm format` 可自动格式化源码与配置文件。
+
 `test` 覆盖历史、设置、箭头序列化和 gzip/Base64 模拟往返；`test:browser` 启动 Vite，验证实际绘制、预览同步、课件与导出。CI 在 Node 24 上运行这些检查。TypeScript 暂固定 5.9.3，因为当前 vue-tsc 版本尚不能加载 TypeScript 7 的内部入口。
 
-代码入口见 [AGENT.md](AGENT.md)，历史调整记录见 [调整清单](docs/adjustment-plan.md)。
+代码入口见 [AGENTS.md](AGENTS.md)，历史调整记录见 [调整清单](docs/adjustment-plan.md)。

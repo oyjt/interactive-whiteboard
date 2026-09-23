@@ -55,5 +55,12 @@
 - [x] 采用 gzip / Base64 编码与解码的本地同步模拟，注释标明未来的发送和接收位置；无需 iframe 或 WebSocket 服务。
 - [x] 将 Tailwind 实用类内联到 Vue 模板；全局入口整理到 `src/styles/index.css`。
 - [x] 清理未使用的图像，组件私有 SVG 就近存放，共享素材放在 `src/assets`。
-- [x] 完善面向用户的 README 与面向 AI agent 的 AGENT.md。
+- [x] 完善面向用户的 README 与面向 AI agent 的 AGENTS.md。
+
+## 第三阶段：工程规范与目录
+
+- [x] 接入 Oxlint 和 Oxfmt，纳入 CI 与开发命令；在关键时序和边界添加中文 JSDoc。
+- [x] 将环境声明放入 `src/types/`，统一使用根目录的 `AGENTS.md`。
+- [x] 保持共享素材在 `src/assets/`、组件专用 SVG 就近存放；删除未使用的 Vite 默认图标。
+- [ ] `src/core/index.ts` 同时处理绘图、页面、历史、文本和擦除；后续新增相关功能时按职责逐步提取，先补行为回归，再避免一次性重写。
 - [ ] 多人编辑、认证、权限、持久化与增量同步另行设计，不属于单发布者预览演示。

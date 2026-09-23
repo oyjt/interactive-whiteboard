@@ -1,11 +1,14 @@
 {
   "name": "interactive-whiteboard",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "lint": "oxlint --vue-plugin src tests vite.config.ts",
+    "format": "oxfmt src tests vite.config.ts index.html package.json tsconfig.json tsconfig.node.json",
+    "format:check": "pnpm format --check",
     "preview": "vite preview",
     "test": "node --test tests/core.test.mjs tests/preview.test.mjs",
     "test:browser": "node tests/browser.mjs"
@@ -21,6 +24,8 @@
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "^24.13.6",
     "@vitejs/plugin-vue": "^6.0.9",
+    "oxfmt": "0.70.0",
+    "oxlint": "1.85.0",
     "playwright": "1.63.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5.9.3",

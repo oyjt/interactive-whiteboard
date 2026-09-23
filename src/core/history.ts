@@ -1,4 +1,4 @@
-/** Snapshot history. Keep at most 50 edits plus the initial state. */
+/** 保存当前页面的快照与撤销位置，默认最多保留 50 次编辑及初始状态。 */
 export class SnapshotHistory {
   private states: string[];
   private index = 0;
@@ -9,10 +9,21 @@ export class SnapshotHistory {
     this.limit = limit;
   }
 
-  get current() { return this.states[this.index]; }
-  get canUndo() { return this.index > 0; }
-  get canRedo() { return this.index < this.states.length - 1; }
+  get current() {
+    return this.states[this.index];
+  }
+  get canUndo() {
+    return this.index > 0;
+  }
+  get canRedo() {
+    return this.index < this.states.length - 1;
+  }
 
+  /**
+   * 提交快照；重复内容不会占用历史，撤销后编辑会截断重做分支。
+   * @param state 序列化后的画布状态。
+   * @returns 是否写入了新的历史记录。
+   */
   push(state: string) {
     if (state === this.current) return false;
     this.states.splice(this.index + 1);
