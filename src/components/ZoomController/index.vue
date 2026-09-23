@@ -1,22 +1,22 @@
 <template>
     <div class="scale-controller-box">
-        <button class="scale-controller-btn" aria-label="重置缩放" @click="rSet">
-            <img :src="reset" alt="" />
-        </button>
-        <div class="scale-controller-cut-line" />
-        <button class="scale-controller-btn" aria-label="缩小" @click="small">
-            <img :src="less" alt="" />
-        </button>
-        <div class="zoom-value">
-            {{zoomRatio}}%
+        <div class="scale-controller-btn" @click="rSet">
+            <img :src="reset" alt="重置" />
         </div>
-        <button class="scale-controller-btn" aria-label="放大" @click="big">
-            <img :src="plus" alt="" />
-        </button>
+        <div class="scale-controller-cut-line" />
+        <div class="scale-controller-btn" @click="small">
+            <img :src="less" alt="缩小" />
+        </div>
+        <div>
+            {{zoomRatio}} <span style="opacity: 0.6">%</span>
+        </div>
+        <div class="scale-controller-btn" @click="big">
+            <img :src="plus" alt="放大" />
+        </div>
     </div>
 </template>
 <script setup lang="ts">
-import { inject, ref, type Ref } from 'vue'
+import { computed, inject, ref, Ref } from 'vue'
 import FabricCanvas from '@/core'
 import reset from "./image/reset.svg";
 import plus from "./image/plus.svg";
@@ -41,17 +41,15 @@ function small() {
 <style lang="scss" scoped>
 
 .scale-controller-box {
-  height: 40px;
-  padding: 4px;
-  background: var(--color-surface);
+  height: 32px;
+  background-color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 4px;
   user-select: none;
   font-size: 12px;
-  box-shadow: var(--shadow-island);
+  box-shadow:0 8px 24px 0 rgba(0,0,0,0.08);
 }
 
 .scale-controller-btn {
@@ -60,26 +58,19 @@ function small() {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0;
+  margin-left: 4px;
+  margin-right: 4px;
   cursor: pointer;
-  border-radius: 7px;
+  border-radius: 2px;
   &:hover {
-    background: var(--color-button-hover);
+    background: rgba(33,35,36,0.1);
   }
 }
 
 .scale-controller-cut-line {
-  margin: 0 4px;
-  background: var(--color-border);
+  background-color: #E7E7E7;
   height: 20px;
   width: 0.5px;
-}
-
-.zoom-value {
-  min-width: 42px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  text-align: center;
 }
 
 </style>

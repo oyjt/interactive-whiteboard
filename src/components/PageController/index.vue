@@ -51,8 +51,8 @@ watch(() => canvas?.value, (board, _, cleanup) => {
 </script>
 <style lang="scss">
 .whiteboard-annex-box {
-  height: 28px;
-  background: transparent;
+  height: 24px;
+  background-color: white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,24 +61,21 @@ watch(() => canvas?.value, (board, _, cleanup) => {
 
 .whiteboard-annex-arrow {
   display: flex;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
   justify-content: center;
   align-items: center;
   cursor: pointer;
 
   &:hover {
-    background: var(--color-button-hover);
+    background: rgba(33, 35, 36, 0.1);
   }
 }
 
 .whiteboard-annex-arrow-page {
   margin-left: 8px;
   margin-right: 8px;
-  min-width: 44px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  text-align: center;
+  color: #212324;
 }
 </style>
