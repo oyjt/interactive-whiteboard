@@ -69,7 +69,7 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => { board.off('insert:images', update); board.off('current:image', update); });
 }, { immediate: true });
 </script>
-<style lang="scss">
+<style>
 .menu-title-line {
     display: flex;
     justify-content: space-between;

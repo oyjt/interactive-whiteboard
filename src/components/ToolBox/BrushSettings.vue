@@ -51,20 +51,21 @@ function updateSize(width: number) {
 function updateColor(color: string) { model.value = { ...model.value, color }; }
 </script>
 <style scoped>
-.brush-settings { width: 210px; padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 30px #0f172a14; color: #1e293b; text-align: left; }
-.settings-title { font-size: 14px; font-weight: 650; margin-bottom: 16px; }
-.size-label, .color-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin: 10px 0; }
-output, .color-label span { color: #64748b; font-variant-numeric: tabular-nums; }
-input[type=range] { width: 100%; accent-color: #2563eb; cursor: pointer; }
-.size-presets { display: flex; gap: 6px; margin: 8px 0 18px; }
-.size-presets button { flex: 1; border: 1px solid #e2e8f0; padding: 5px 0; font-size: 12px; border-radius: 5px; }
-.size-presets button[aria-pressed=true] { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
-.color-presets { display: flex; gap: 8px; flex-wrap: wrap; }
-.color-presets > button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #cbd5e1; padding: 0; }
-.color-presets > button[aria-pressed=true] { outline: 2px solid #2563eb; outline-offset: 2px; }
-.custom-color { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; }
-input[type=color] { width: 32px; height: 26px; padding: 0; border: 0; cursor: pointer; background: none; }
-.stroke-preview { height: 80px; margin-top: 14px; background: #f1f5f9; border-radius: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-.stroke-preview svg { width: 100%; height: 70px; }
-p { font-size: 11px; color: #64748b; margin: 10px 0 0; }
+@reference "tailwindcss";
+.brush-settings { @apply w-[210px] rounded-xl border border-slate-200 bg-white p-4 text-left text-slate-800 shadow-lg; }
+.settings-title { @apply mb-4 text-sm font-semibold; }
+.size-label, .color-label { @apply my-2.5 flex items-center justify-between text-xs; }
+output, .color-label span { @apply text-slate-500 tabular-nums; }
+input[type=range] { @apply w-full cursor-pointer accent-blue-600; }
+.size-presets { @apply mt-2 mb-[18px] flex gap-1.5; }
+.size-presets button { @apply flex-1 rounded-md border border-slate-200 py-1 text-xs; }
+.size-presets button[aria-pressed=true] { @apply border-blue-300 bg-blue-50 text-blue-700; }
+.color-presets { @apply flex flex-wrap gap-2; }
+.color-presets > button { @apply h-[26px] w-[26px] rounded-full border border-slate-300; }
+.color-presets > button[aria-pressed=true] { @apply outline-2 outline-offset-2 outline-blue-600; }
+.custom-color { @apply flex items-center gap-2 text-xs text-slate-500; }
+input[type=color] { @apply h-[26px] w-8 cursor-pointer border-0 bg-transparent p-0; }
+.stroke-preview { @apply mt-3.5 flex h-20 items-center justify-center overflow-hidden rounded-lg bg-slate-100; }
+.stroke-preview svg { @apply h-[70px] w-full; }
+p { @apply mt-2.5 text-[11px] text-slate-500; }
 </style>

@@ -25,33 +25,8 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => board.off('history:changed', update));
 }, { immediate: true });
 </script>
-<style lang="scss">
-.redo-undo {
-  height: 32px;
-  width: 60px;
-  background-color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  user-select: none;
-  font-size: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
-}
-
-.redo-undo-controller-btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 2px;
-  margin-left: 2px;
-  margin-right: 2px;
-
-  &:hover {
-    background: rgba(33, 35, 36, 0.1);
-  }
-}
+<style>
+@reference "tailwindcss";
+.redo-undo { @apply flex h-8 w-[60px] cursor-pointer select-none items-center justify-center rounded bg-white text-xs shadow-md; }
+.redo-undo-controller-btn { @apply mx-0.5 flex h-6 w-6 items-center justify-center rounded-sm hover:bg-gray-200; }
 </style>

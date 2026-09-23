@@ -144,11 +144,12 @@ function clickClear() {
 }
 </script>
 <style scoped>
-.tools-layout { display: flex; align-items: center; gap: 8px; }
-.tool-mid-box-left { width: 40px; display: flex; flex-direction: column; align-items: center; background: white; padding: 4px 0; border-radius: 6px; box-shadow: 0 4px 12px #0f172a14; }
-.tool-box-cell-box-left { width: 32px; height: 32px; padding: 4px; border: none; background: transparent; color: #444e60; border-radius: 4px; flex-shrink: 0; }
-.tool-box-cell-box-left img { width: 24px; height: 24px; }
-.tool-icon { display: block; width: 24px; height: 24px; background: currentColor; mask: center / contain no-repeat; }
-.tool-box-cell-box-left:hover, .tool-box-cell-box-left[aria-pressed=true] { background: #eff6ff; }
+@reference "tailwindcss";
+.tools-layout { @apply flex items-center gap-2; }
+.tool-mid-box-left { @apply flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md; }
+.tool-box-cell-box-left { @apply h-8 w-8 shrink-0 rounded p-1 text-[#444e60]; }
+.tool-box-cell-box-left img { @apply h-6 w-6; }
+.tool-icon { @apply block h-6 w-6 bg-current; mask: center / contain no-repeat; }
+.tool-box-cell-box-left:hover, .tool-box-cell-box-left[aria-pressed=true] { @apply bg-blue-50; }
 .tool-box-cell-box-left[aria-pressed=true] { color: #2563eb; }
 </style>

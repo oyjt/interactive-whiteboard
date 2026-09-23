@@ -49,33 +49,9 @@ watch(() => canvas?.value, (board, _, cleanup) => {
   cleanup(() => events.forEach(event => board.off(event, update)));
 }, { immediate: true });
 </script>
-<style lang="scss">
-.whiteboard-annex-box {
-  height: 24px;
-  background-color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-}
-
-.whiteboard-annex-arrow {
-  display: flex;
-  width: 24px;
-  height: 24px;
-  border-radius: 2px;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(33, 35, 36, 0.1);
-  }
-}
-
-.whiteboard-annex-arrow-page {
-  margin-left: 8px;
-  margin-right: 8px;
-  color: #212324;
-}
+<style>
+@reference "tailwindcss";
+.whiteboard-annex-box { @apply flex h-6 select-none items-center justify-center bg-white; }
+.whiteboard-annex-arrow { @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm hover:bg-gray-200; }
+.whiteboard-annex-arrow-page { @apply mx-2 text-[#212324]; }
 </style>

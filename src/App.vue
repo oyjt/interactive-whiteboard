@@ -38,7 +38,7 @@ import ZoomController from './components/ZoomController/index.vue';
 import PageController from './components/PageController/index.vue';
 import PreviewController from './components/PreviewController/index.vue';
 import pages from './assets/images/pages.svg';
-import { gzip, ungzip } from './utils';
+import { createBoardSync } from './services/boardSync';
 
 const canvas = shallowRef<FabricCanvas>();
 provide('canvas', canvas);
@@ -52,10 +52,7 @@ let mirror: StaticCanvas | undefined;
 let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
 let syncing: Promise<void> | undefined;
 let disposed = false;
-let latest: ReturnType<FabricCanvas['toJSON']> | undefined;
-let sender: WebSocket | undefined;
-let receiver: WebSocket | undefined;
-let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+let sync: ReturnType<typeof createBoardSync> | undefined;
 
 function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
   pending = data;
@@ -72,48 +69,11 @@ function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
   })().finally(() => { syncing = undefined; });
 }
 
-function sendLatest() {
-  if (!latest || sender?.readyState !== WebSocket.OPEN) return;
-  try { sender.send(gzip(latest)); }
-  catch { error.value = '同步发送失败，请检查白板内容或重新连接。'; }
-}
-
-function connectSync() {
-  if (!syncUrl || disposed) return;
-  const room = new URLSearchParams(location.search).get('room') || 'demo';
-  const endpoint = new URL(syncUrl, location.href);
-  endpoint.searchParams.set('room', room);
-  endpoint.searchParams.set('role', 'source');
-  sender = new WebSocket(endpoint);
-  endpoint.searchParams.set('role', 'preview');
-  receiver = new WebSocket(endpoint);
-  receiver.binaryType = 'arraybuffer';
-  sender.onopen = () => {
-    if (receiver?.readyState === WebSocket.OPEN) syncStatus.value = 'WebSocket 已连接';
-    sendLatest();
-  };
-  receiver.onopen = () => {
-    if (sender?.readyState === WebSocket.OPEN) syncStatus.value = 'WebSocket 已连接';
-  };
-  receiver.onmessage = ({ data }) => {
-    try { renderPreview(ungzip(new Uint8Array(data))); }
-    catch { error.value = '收到的同步数据无法解压或解析。'; }
-  };
-  const reconnect = () => {
-    if (disposed || reconnectTimer) return;
-    syncStatus.value = 'WebSocket 断开，正在重连';
-    sender?.close();
-    receiver?.close();
-    reconnectTimer = setTimeout(() => { reconnectTimer = undefined; connectSync(); }, 1000);
-  };
-  sender.onclose = receiver.onclose = reconnect;
-}
-
 function syncContent(snapshot?: ReturnType<FabricCanvas['toJSON']>) {
   if (!canvas.value || disposed) return;
-  latest = snapshot ?? canvas.value.toJSON();
-  if (syncUrl) sendLatest();
-  else renderPreview(latest);
+  const latest = snapshot ?? canvas.value.toJSON();
+  if (sync) sync.publish(latest);
+  else if (!syncUrl) renderPreview(latest);
 }
 
 async function insertPPT() {
@@ -145,38 +105,43 @@ onMounted(() => {
   board.on('insert:images', () => { hasScenes.value = board.getScenes().length > 0; });
   board.on('history:changed', () => { busy.value = board.getHistoryState().busy; });
   board.on('error', (message: string) => { error.value = message; });
+  if (syncUrl) {
+    sync = createBoardSync(syncUrl, new URLSearchParams(location.search).get('room') || 'demo', {
+      receive: renderPreview,
+      status: message => { syncStatus.value = message; },
+      error: message => { error.value = message; },
+    });
+  }
   syncContent();
-  connectSync();
 });
 onBeforeUnmount(() => {
   disposed = true;
   pending = undefined;
-  clearTimeout(reconnectTimer);
-  sender?.close();
-  receiver?.close();
+  sync?.dispose();
   void canvas.value?.destroy();
   void (syncing ?? Promise.resolve()).finally(() => mirror?.dispose());
 });
 </script>
 <style scoped>
-.whiteboard-app { max-width: 850px; margin: 0 auto; padding: 24px; }
-.app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; }
-h1 { font-size: 22px; margin: 0; letter-spacing: -.5px; }
-.app-header p { font-size: 12px; color: #64748b; margin: 4px 0 0; }
-.header-actions { display: flex; gap: 8px; }
-.header-actions button { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; background: white; }
-.header-actions button:last-child { color: white; background: #2563eb; border-color: #2563eb; }
-.canvas-scroll { overflow-x: auto; padding: 2px; }
-.canvas-wrap { position: relative; width: 800px; height: 450px; background: white; border: 1px solid #dbe3ee; border-radius: 8px; overflow: hidden; }
-.tool-box-out { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 3; }
-.redo-undo-box { position: absolute; bottom: 8px; left: 8px; z-index: 3; }
-.zoom-controller-box { position: absolute; bottom: 8px; left: 76px; z-index: 3; }
-.page-controller-box { position: absolute; bottom: 8px; right: 8px; z-index: 3; display: flex; align-items: center; background: white; padding: 4px; border-radius: 4px; }
-.page-controller-box img { width: 24px; height: 24px; }
-.preview-controller-box { position: absolute; right: 0; top: 0; width: 240px; height: 100%; z-index: 4; box-shadow: 0 4px 12px #0002; }
-.mirror-heading { font-size: 13px; margin: 20px 0 8px; }
-.mirror-heading span { color: #94a3b8; font-size: 11px; margin-left: 8px; }
-.usage-hint { font-size: 11px; color: #64748b; line-height: 1.8; }
-.error-message { padding: 10px; border-radius: 6px; background: #fff1f2; color: #be123c; font-size: 13px; }
+@reference "tailwindcss";
+.whiteboard-app { @apply mx-auto max-w-[850px] p-6; }
+.app-header { @apply mb-5 flex items-center justify-between gap-3; }
+h1 { @apply text-[22px] tracking-[-.5px]; }
+.app-header p { @apply mt-1 text-xs text-slate-500; }
+.header-actions { @apply flex gap-2; }
+.header-actions button { @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs; }
+.header-actions button:last-child { @apply border-blue-600 bg-blue-600 text-white; }
+.canvas-scroll { @apply overflow-x-auto p-0.5; }
+.canvas-wrap { @apply relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white; }
+.tool-box-out { @apply absolute top-1/2 left-2 z-[3] -translate-y-1/2; }
+.redo-undo-box { @apply absolute bottom-2 left-2 z-[3]; }
+.zoom-controller-box { @apply absolute bottom-2 left-[76px] z-[3]; }
+.page-controller-box { @apply absolute right-2 bottom-2 z-[3] flex items-center rounded bg-white p-1; }
+.page-controller-box img { @apply h-6 w-6; }
+.preview-controller-box { @apply absolute top-0 right-0 z-[4] h-full w-60 shadow-lg; }
+.mirror-heading { @apply mt-5 mb-2 text-[13px]; }
+.mirror-heading span { @apply ml-2 text-[11px] text-slate-400; }
+.usage-hint { @apply text-[11px] leading-[1.8] text-slate-500; }
+.error-message { @apply rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700; }
 @media (max-width: 600px) { .whiteboard-app { padding: 12px; } .app-header { align-items: flex-start; } .header-actions { flex-wrap: wrap; justify-content: flex-end; } }
 </style>

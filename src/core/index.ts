@@ -62,6 +62,9 @@ const ERASER_TRAIL_MS = 420;
 
 // Persist eraser eligibility across undo, cloning and page changes.
 FabricObject.customProperties = [...new Set([...FabricObject.customProperties, "erasable"])];
+// Fabric 7 centers objects by default; existing drawing coordinates and snapshots use top-left.
+FabricObject.ownDefaults.originX = 'left';
+FabricObject.ownDefaults.originY = 'top';
 
 interface FabricEvents {
   "object:added": any;
@@ -71,7 +74,6 @@ interface FabricEvents {
   "mouse:down": any;
   "mouse:move": any;
   "mouse:up": any;
-  "after:render": any;
   [key: string | symbol]: any;
 }
 
@@ -210,6 +212,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       isDrawingMode: true,
       selection: false,
       includeDefaultValues: false, // 转换成json对象，不包含默认值
+      fireMiddleClick: false,
+      fireRightClick: false,
     });
     this.options.stroke = this.settings.color;
     this.options.strokeWidth = this.settings.width;
@@ -313,14 +317,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     } else {
       this.canvas.setActiveObject(object);
     }
-  }
-
-  public setWidth(value: number | string): void {
-    this.canvas.setWidth(value);
-  }
-
-  public setHeight(value: number | string): void {
-    this.canvas.setHeight(value);
   }
 
   // 切换绘制工具
@@ -650,11 +646,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       this.emit("object:removed", e);
     });
 
-    // 画布重绘后同步到远程
-    this.canvas.on("after:render", (e: { ctx: CanvasRenderingContext2D }) => {
-      this.emit("after:render", e);
-    });
-
     // 监听路径事件
     this.canvas.on("path:created", (e: { path: FabricObject }) => {
       // 设置路径为可擦除
@@ -669,7 +660,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     window.addEventListener('pointerup', (event) => {
       this.finishErasing(true);
       if (this.isDrawing && this.drawingTool === 'text') {
-        this.onMouseUp({ pointer: this.canvas.getScenePoint(event) });
+        this.onMouseUp({ scenePoint: this.canvas.getScenePoint(event) });
       }
     }, { signal: this.abortController.signal });
   }
@@ -680,7 +671,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   }
 
   private updateTextPreview(event: any) {
-    const { x, y } = event.pointer;
+    const { x, y } = event.scenePoint;
     if (!this.textDrag && Math.hypot(x - this.startX, y - this.startY) < 6) return;
     this.textDrag = true;
     if (!this.textPreview) {
@@ -718,8 +709,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 鼠标按下事件处理函数
   private onMouseDown(event: any) {
-    if (!event.pointer) return;
-    const { x, y } = event.pointer;
+    if (!event.scenePoint) return;
+    const { x, y } = event.scenePoint;
     if (this.drawingTool === 'eraser') {
       this.erasing = true;
       this.updateEraserTrail(event.e);
@@ -761,18 +752,18 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
 
   // 鼠标移动事件处理函数
   private onMouseMove(event: any) {
-    if (this.erasing && event.pointer) {
+    if (this.erasing && event.scenePoint) {
       this.updateEraserTrail(event.e);
-      this.markErasure(new Point(event.pointer.x, event.pointer.y));
+      this.markErasure(new Point(event.scenePoint.x, event.scenePoint.y));
       return;
     }
-    if (this.isDrawing && this.drawingTool === 'text' && event.pointer) {
+    if (this.isDrawing && this.drawingTool === 'text' && event.scenePoint) {
       this.updateTextPreview(event);
       return;
     }
-    if (!this.isDrawing || !event.pointer || !this.currentShape) return;
+    if (!this.isDrawing || !event.scenePoint || !this.currentShape) return;
 
-    const { x, y } = event.pointer;
+    const { x, y } = event.scenePoint;
     const left = Math.min(x, this.startX);
     const top = Math.min(y, this.startY);
     const width = Math.abs(x - this.startX);
@@ -811,8 +802,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       return;
     }
     if (this.isDrawing && this.drawingTool === 'text') {
-      const x = event.pointer?.x ?? this.startX;
-      const y = event.pointer?.y ?? this.startY;
+      const x = event.scenePoint?.x ?? this.startX;
+      const y = event.scenePoint?.y ?? this.startY;
       this.clearTextPreview();
       this.isDrawing = false;
       this.startTextEditing(this.textDrag ? Math.min(x, this.startX) : this.startX,
