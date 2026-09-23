@@ -22,7 +22,7 @@
         </div>
         <canvas id="canvas" width="800" height="450"></canvas>
       </div>
-      <div class="mirror-heading">同步预览 <span>内容变更后更新</span></div>
+      <div class="mirror-heading">同步预览 <span>{{ syncStatus }}</span></div>
       <div class="canvas-wrap mirror-wrap"><canvas id="canvas2" width="800" height="450"></canvas></div>
     </div>
     <p class="usage-hint">画笔、图形和文字均可设置 · 文字拖拽指定宽度 · 橡皮擦松手删除对象</p>
@@ -38,6 +38,7 @@ import ZoomController from './components/ZoomController/index.vue';
 import PageController from './components/PageController/index.vue';
 import PreviewController from './components/PreviewController/index.vue';
 import pages from './assets/images/pages.svg';
+import { gzip, ungzip } from './utils';
 
 const canvas = shallowRef<FabricCanvas>();
 provide('canvas', canvas);
@@ -45,14 +46,19 @@ const isPreviewShow = ref(false);
 const hasScenes = ref(false);
 const busy = ref(false);
 const error = ref('');
+const syncUrl = import.meta.env.VITE_WHITEBOARD_WS_URL as string | undefined;
+const syncStatus = ref(syncUrl ? '正在连接 WebSocket' : '本地预览 · 内容变更后更新');
 let mirror: StaticCanvas | undefined;
 let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
 let syncing: Promise<void> | undefined;
 let disposed = false;
+let latest: ReturnType<FabricCanvas['toJSON']> | undefined;
+let sender: WebSocket | undefined;
+let receiver: WebSocket | undefined;
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
-function syncContent() {
-  if (!canvas.value || disposed) return;
-  pending = canvas.value.toJSON();
+function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
+  pending = data;
   if (syncing) return;
   syncing = (async () => {
     while (pending && mirror && !disposed) {
@@ -64,6 +70,50 @@ function syncContent() {
       } catch { if (!disposed) error.value = '同步预览加载失败，请重新编辑后重试。'; }
     }
   })().finally(() => { syncing = undefined; });
+}
+
+function sendLatest() {
+  if (!latest || sender?.readyState !== WebSocket.OPEN) return;
+  try { sender.send(gzip(latest)); }
+  catch { error.value = '同步发送失败，请检查白板内容或重新连接。'; }
+}
+
+function connectSync() {
+  if (!syncUrl || disposed) return;
+  const room = new URLSearchParams(location.search).get('room') || 'demo';
+  const endpoint = new URL(syncUrl, location.href);
+  endpoint.searchParams.set('room', room);
+  endpoint.searchParams.set('role', 'source');
+  sender = new WebSocket(endpoint);
+  endpoint.searchParams.set('role', 'preview');
+  receiver = new WebSocket(endpoint);
+  receiver.binaryType = 'arraybuffer';
+  sender.onopen = () => {
+    if (receiver?.readyState === WebSocket.OPEN) syncStatus.value = 'WebSocket 已连接';
+    sendLatest();
+  };
+  receiver.onopen = () => {
+    if (sender?.readyState === WebSocket.OPEN) syncStatus.value = 'WebSocket 已连接';
+  };
+  receiver.onmessage = ({ data }) => {
+    try { renderPreview(ungzip(new Uint8Array(data))); }
+    catch { error.value = '收到的同步数据无法解压或解析。'; }
+  };
+  const reconnect = () => {
+    if (disposed || reconnectTimer) return;
+    syncStatus.value = 'WebSocket 断开，正在重连';
+    sender?.close();
+    receiver?.close();
+    reconnectTimer = setTimeout(() => { reconnectTimer = undefined; connectSync(); }, 1000);
+  };
+  sender.onclose = receiver.onclose = reconnect;
+}
+
+function syncContent(snapshot?: ReturnType<FabricCanvas['toJSON']>) {
+  if (!canvas.value || disposed) return;
+  latest = snapshot ?? canvas.value.toJSON();
+  if (syncUrl) sendLatest();
+  else renderPreview(latest);
 }
 
 async function insertPPT() {
@@ -96,10 +146,14 @@ onMounted(() => {
   board.on('history:changed', () => { busy.value = board.getHistoryState().busy; });
   board.on('error', (message: string) => { error.value = message; });
   syncContent();
+  connectSync();
 });
 onBeforeUnmount(() => {
   disposed = true;
   pending = undefined;
+  clearTimeout(reconnectTimer);
+  sender?.close();
+  receiver?.close();
   void canvas.value?.destroy();
   void (syncing ?? Promise.resolve()).finally(() => mirror?.dispose());
 });
