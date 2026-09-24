@@ -5,9 +5,14 @@ on:
     branches: [main]
     paths-ignore:
       - README.md
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -15,27 +20,18 @@ jobs:
 
     steps:
       - name: 检出代码
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: 设置 pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.20.0
 
       - name: 设置 Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
-
-      - name: 缓存 pnpm store
-        uses: actions/cache@v4
-        id: pnpm-cache
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-
 
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
