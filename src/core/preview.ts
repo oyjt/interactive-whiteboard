@@ -1,3 +1,4 @@
+/** 下方只读画布：模拟传输快照，并串行加载最新内容。 */
 import { StaticCanvas } from 'fabric';
 
 import { simulatePreviewTransport } from '@/utils/previewSync';
@@ -14,6 +15,7 @@ export function createPreview(canvasId: string, onError: (message: string) => vo
   let loading: Promise<void> | undefined;
   let disposed = false;
 
+  /** 只保留最新待处理快照，避免异步加载时预览旧数据排队。 */
   function sync(snapshot: Snapshot) {
     if (disposed) return;
     try {
@@ -39,6 +41,7 @@ export function createPreview(canvasId: string, onError: (message: string) => vo
     });
   }
 
+  /** 等待在途快照加载完成后释放 Fabric 资源。 */
   async function dispose() {
     disposed = true;
     pending = undefined;

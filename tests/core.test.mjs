@@ -52,7 +52,13 @@ test('settings sanitize corrupt or out-of-range saved values', () => {
 });
 
 test('arrow survives JSON restoration and clone', async () => {
-  const arrow = new Arrow([10, 20, 80, 90], { stroke: '#ff0000', strokeWidth: 5 });
+  const arrow = new Arrow(
+    [
+      { x: 10, y: 20 },
+      { x: 80, y: 90 },
+    ],
+    { stroke: '#ff0000', strokeWidth: 5 },
+  );
   const json = arrow.toObject();
   assert.equal(json.type, 'Arrow');
   const restored = await classRegistry.getClass(json.type).fromObject(json);

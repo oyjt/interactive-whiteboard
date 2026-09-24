@@ -1,17 +1,20 @@
-import { Line, classRegistry } from 'fabric';
+/** 开放式箭头 Fabric 对象及其 JSON 类注册。 */
+import { Polyline, classRegistry } from 'fabric';
 
-/** 可序列化的开放式箭头，继承 Fabric 直线并绘制两段箭头边。 */
-class Arrow extends Line {
+/** 两点折线上的开放式箭头；继承 Polyline 保持 Fabric JSON 克隆和恢复能力。 */
+class Arrow extends Polyline {
   static type = 'Arrow';
+  /** 先绘制直线，再用两段笔画绘制无底边的箭头。 */
   _render(ctx: CanvasRenderingContext2D) {
     super._render(ctx);
-    const { x1, y1, x2, y2 } = this.calcLinePoints();
-    const length = Math.hypot(x2 - x1, y2 - y1);
+    const [start, end] = this.points;
+    if (!start || !end) return;
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
     if (length < 1 || !this.stroke) return;
     const headLength = Math.min(14 + this.strokeWidth, length / 2);
     ctx.save();
-    ctx.translate(x2, y2);
-    ctx.rotate(Math.atan2(y2 - y1, x2 - x1));
+    ctx.translate(end.x - this.pathOffset.x, end.y - this.pathOffset.y);
+    ctx.rotate(Math.atan2(end.y - start.y, end.x - start.x));
     ctx.beginPath();
     ctx.moveTo(-headLength, -headLength * 0.55);
     ctx.lineTo(0, 0);

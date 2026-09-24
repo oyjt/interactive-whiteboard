@@ -1,3 +1,4 @@
+/** 白板核心入口：管理绘图工具、课件页面、历史记录与 Fabric 事件。 */
 import {
   Canvas,
   FabricImage,
@@ -10,7 +11,7 @@ import {
   CircleProps,
   Ellipse,
   EllipseProps,
-  Line,
+  Polyline,
   PencilBrush,
   IText,
   ITextProps,
@@ -38,11 +39,8 @@ import initControlsRotate from './initControlsRotate';
 import initHotKeys from './initHotKeys';
 import Arrow from './objects/Arrow';
 
-// Persist eraser eligibility across undo, cloning and page changes.
+/** 克隆和历史快照需保留对象的橡皮擦标记。 */
 FabricObject.customProperties = [...new Set([...FabricObject.customProperties, 'erasable'])];
-// Fabric 7 centers objects by default; existing drawing coordinates and snapshots use top-left.
-FabricObject.ownDefaults.originX = 'left';
-FabricObject.ownDefaults.originY = 'top';
 
 interface FabricEvents {
   'object:added': any;
@@ -55,7 +53,7 @@ interface FabricEvents {
   [key: string | symbol]: any;
 }
 
-// 定义绘图工具类型
+/** 工具栏及鼠标手势使用的绘图模式。 */
 export type DrawingTool =
   | 'rectangle'
   | 'triangle'
@@ -105,20 +103,26 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   private disposed = false;
   private abortController = new AbortController();
   private commitTimer?: ReturnType<typeof setTimeout>;
+  /** 画布销毁时解除当前快捷键绑定。 */
   private cleanupHotkeys: () => void = () => {};
 
+  /** 返回当前画笔、线条和文字的设置副本。 */
   public getBrushSettings() {
     return { ...this.settings };
   }
+  /** 返回当前绘图工具。 */
   public getDrawingTool() {
     return this.drawingTool;
   }
+  /** 返回课件图片列表副本。 */
   public getScenes() {
     return [...this.images];
   }
+  /** 返回当前课件页下标。 */
   public getCurrentScene() {
     return this.curImageIndex;
   }
+  /** 返回当前页面可撤销、可重做与加载状态。 */
   public getHistoryState() {
     return {
       canUndo: !this.busy && this.history.canUndo,
@@ -127,6 +131,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     };
   }
 
+  /** 校验并保存工具设置，同步更新当前自由画笔。 */
   public setBrushSettings(settings: BrushSettings) {
     this.settings = normalizeBrushSettings(settings);
     this.options.stroke = this.settings.color;
@@ -139,10 +144,12 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.emit('settings:changed', this.getBrushSettings());
   }
 
+  /** 广播当前页面的历史状态。 */
   private publishHistory() {
     this.emit('history:changed', this.getHistoryState());
   }
 
+  /** 加载快照期间暂停画布交互并更新按钮状态。 */
   private setBusy(busy: boolean) {
     this.busy = busy;
     if (this.disposed) return;
@@ -150,6 +157,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.publishHistory();
   }
 
+  /** 合并一次操作期间的多个 Fabric 事件，延后提交快照。 */
   private scheduleCommit() {
     if (this.busy || this.disposed) return;
     clearTimeout(this.commitTimer);
@@ -167,9 +175,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
+  /** 恢复当前页面的上一个快照。 */
   public async undo() {
     await this.restoreHistory(-1);
   }
+  /** 恢复当前页面的下一个快照。 */
   public async redo() {
     await this.restoreHistory(1);
   }
@@ -203,18 +213,20 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
+  /** 结束正在编辑的文字，确保快照记录最终内容。 */
   private finishEditing() {
     const active = this.canvas.getActiveObject();
     if (active instanceof IText && active.isEditing) active.exitEditing();
   }
 
+  /** 初始化画布、工具、页面历史与事件订阅。 */
   constructor(canvasId: string) {
     super();
 
     this.canvas = new Canvas(canvasId, {
       isDrawingMode: true,
       selection: false,
-      includeDefaultValues: false, // 转换成json对象，不包含默认值
+      includeDefaultValues: false,
       fireMiddleClick: false,
       fireRightClick: false,
     });
@@ -226,7 +238,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.setDrawingTool('pencil');
     this.history = new SnapshotHistory(JSON.stringify(this.toJSON()));
 
-    // 初始化热键、控件扩展
     this.cleanupHotkeys = initHotKeys(this.canvas, {
       changed: () => this.commit(),
       undo: () => this.undo(),
@@ -237,11 +248,10 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     initControls();
     initControlsRotate(this.canvas);
 
-    // 初始化事件
     this.initEvent();
   }
 
-  // 获取画布
+  /** 返回底层 Fabric 画布，供高级交互和预览使用。 */
   public getCanvas(): Canvas {
     return this.canvas;
   }
@@ -256,7 +266,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.commit();
   }
 
-  // 设置画布背景颜色
+  /** 设置并提交画布背景色。 */
   public setBackgroundColor(color: string): void {
     if (this.busy || this.disposed) return;
     this.canvas.backgroundColor = color;
@@ -264,63 +274,55 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.scheduleCommit();
   }
 
-  // 设置画布背景图片（居中显示）
+  /** 以画布中心为基准、按高度缩放背景图片。 */
   public async setBackgroundImage(imageUrl: string, options?: TOptions<ImageProps>): Promise<void> {
     const img = await FabricImage.fromURL(imageUrl, {
       crossOrigin: 'anonymous',
       signal: this.abortController.signal,
     });
     if (this.disposed) return;
-    {
-      if (!img) return;
-
-      // 计算图片居中的位置
-      const canvasWidth = this.canvas.getWidth();
-      const canvasHeight = this.canvas.getHeight();
-      // 图片高度充满画布，宽度等比缩放
-      const scale = canvasHeight / (img.height as number);
-      const imageWidth = (img.width as number) * scale;
-
-      img.set({
-        scaleX: scale,
-        scaleY: scale,
-        top: 0,
-        left: (canvasWidth - imageWidth) / 2,
-        originX: 'left',
-        originY: 'top',
-        selectable: false,
-        evented: false,
-        ...options,
-      });
-
-      this.canvas.backgroundImage = img;
-      this.canvas.requestRenderAll();
-      this.scheduleCommit();
-    }
+    const scale = this.canvas.height / img.height;
+    img.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: this.canvas.width / 2,
+      top: this.canvas.height / 2,
+      selectable: false,
+      evented: false,
+      ...options,
+    });
+    this.canvas.backgroundImage = img;
+    this.canvas.requestRenderAll();
+    this.scheduleCommit();
   }
 
+  /** 向画布添加对象，内容事件会安排历史提交。 */
   public addObject(object: FabricObject): void {
     this.canvas.add(object);
   }
 
+  /** 从画布移除对象，内容事件会安排历史提交。 */
   public removeObject(object: FabricObject): void {
     this.canvas.remove(object);
   }
 
-  // 移除所有对象
+  /** 移除画布的全部前景对象，保留背景。 */
   public removeAllObject(): void {
     const objs = this.canvas.getObjects();
     objs.forEach((o) => this.canvas.remove(o));
   }
 
+  /** 获取当前页面的前景对象。 */
   public getObjects(): FabricObject[] {
     return this.canvas.getObjects();
   }
 
+  /** 获取选中的对象，未选中时返回 null。 */
   public getActiveObject(): FabricObject | null {
     return this.canvas.getActiveObject() ?? null;
   }
 
+  /** 设置或取消画布选中对象。 */
   public setActiveObject(object: FabricObject | null): void {
     if (!object) {
       this.canvas.discardActiveObject();
@@ -329,7 +331,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
-  // 切换绘制工具
+  /** 切换工具并取消上一个工具的橡皮擦或文本预览状态。 */
   public setDrawingTool(tool: DrawingTool) {
     if (this.busy || this.drawingTool === tool) return;
     this.finishErasing(false);
@@ -356,17 +358,12 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     } else if (tool === 'select') {
       this.canvas.selection = true;
       this.canvas.defaultCursor = 'auto';
-    } else if (tool === 'text') {
-      // 退出文本编辑模式
-      const activeObject = this.canvas.getActiveObject();
-      if (activeObject instanceof IText && activeObject.isEditing) {
-        activeObject.exitEditing();
-      }
-    } else {
+    } else if (tool !== 'text') {
       this.canvas.defaultCursor = 'crosshair';
     }
   }
 
+  /** 更新图形样式，并同步保存颜色和线宽。 */
   public setOptions(options: ShapeOptions) {
     this.options = { ...this.options, ...options };
     this.setBrushSettings({
@@ -376,35 +373,45 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
   }
 
-  // 绘制矩形
+  /** 对外绘图参数沿用左上角坐标，内部让 Fabric 对象使用默认的中心原点。 */
+  private positionShape(shape: FabricObject, options?: { left?: number; top?: number }) {
+    if (options?.left === undefined && options?.top === undefined) return;
+    shape.setPositionByOrigin(new Point(options.left ?? 0, options.top ?? 0), 'left', 'top');
+  }
+
+  /** 创建矩形，并记录为当前拖拽对象。 */
   public drawRect(options: TOptions<RectProps>): void {
     const rect = new Rect({ ...this.options, ...options });
+    this.positionShape(rect, options);
     this.canvas.add(rect);
     this.currentShape = rect;
   }
 
-  // 绘制三角形
+  /** 创建三角形，并记录为当前拖拽对象。 */
   public drawTriangle(options: TOptions<FabricObjectProps>): void {
     const triangle = new Triangle({ ...this.options, ...options });
+    this.positionShape(triangle, options);
     this.canvas.add(triangle);
     this.currentShape = triangle;
   }
 
-  // 绘制圆形
+  /** 创建圆形，并记录为当前拖拽对象。 */
   public drawCircle(options: TOptions<CircleProps>): void {
     const circle = new Circle({ ...this.options, ...options });
+    this.positionShape(circle, options);
     this.canvas.add(circle);
     this.currentShape = circle;
   }
 
-  // 绘制椭圆
+  /** 创建椭圆，并记录为当前拖拽对象。 */
   public drawEllipse(options: TOptions<EllipseProps>): void {
     const ellipse = new Ellipse({ ...this.options, ...options });
+    this.positionShape(ellipse, options);
     this.canvas.add(ellipse);
     this.currentShape = ellipse;
   }
 
-  // 绘制线条
+  /** 创建连接两点的直线。 */
   public drawLine(
     x1: number,
     y1: number,
@@ -412,12 +419,21 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     y2: number,
     options?: TOptions<FabricObjectProps>,
   ): void {
-    const line = new Line([x1, y1, x2, y2], { ...this.options, ...options });
+    const line = new Polyline(
+      [
+        { x: x1, y: y1 },
+        { x: x2, y: y2 },
+      ],
+      {
+        ...this.options,
+        ...options,
+      },
+    );
     this.canvas.add(line);
     this.currentShape = line;
   }
 
-  // 绘制箭头
+  /** 创建可序列化的开放式箭头。 */
   public drawArrow(
     x1: number,
     y1: number,
@@ -425,12 +441,21 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     y2: number,
     options?: TOptions<FabricObjectProps>,
   ): void {
-    const arrow = new Arrow([x1, y1, x2, y2], { ...this.options, ...options });
+    const arrow = new Arrow(
+      [
+        { x: x1, y: y1 },
+        { x: x2, y: y2 },
+      ],
+      {
+        ...this.options,
+        ...options,
+      },
+    );
     this.canvas.add(arrow);
     this.currentShape = arrow;
   }
 
-  // 自由绘制
+  /** 按当前设置启用 Fabric 自由画笔。 */
   public drawFreeDraw() {
     const brush = new PencilBrush(this.canvas);
     brush.width = this.options.strokeWidth ?? 5;
@@ -440,7 +465,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.isDrawingMode = true;
   }
 
-  // 绘制文本
+  /** 创建可直接编辑的文字对象。 */
   public drawText(text: string, options?: TOptions<ITextProps>): void {
     const textObj = new IText(text, {
       fill: this.options.stroke,
@@ -449,12 +474,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       fontSize: this.settings.fontSize,
       ...options,
     });
+    this.positionShape(textObj, options);
     this.canvas.add(textObj);
     this.canvas.defaultCursor = 'text';
     this.currentShape = textObj;
   }
 
-  // 插入图片
+  /** 异步载入图片，按画布尺寸缩小并放在中心。 */
   public async insertImage(url: string, options?: TOptions<ImageProps>): Promise<void> {
     if (this.busy || this.disposed) return;
     this.setBusy(true);
@@ -468,8 +494,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       img.set({
         scaleX: scale,
         scaleY: scale,
-        left: (this.canvas.width - img.width * scale) / 2,
-        top: (this.canvas.height - img.height * scale) / 2,
+        left: this.canvas.width / 2,
+        top: this.canvas.height / 2,
         erasable: true,
         ...options,
       });
@@ -486,7 +512,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
   /** 载入课件；每个页面分别持有快照历史，重复打开时保留已有批注。 */
   public async insertPPT(urls: string[]): Promise<void> {
     if (this.busy || this.disposed || !urls.length) return;
-    // Reopening the built-in deck must not erase annotations.
+    // 重复打开课件时保留每一页已有的批注。
     if (this.images.length) return;
     this.images = [...urls];
     this.pageHistories = [];
@@ -512,7 +538,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
           signal: this.abortController.signal,
         });
       } else {
-        // Load the background before replacing content so a failed image keeps the old page.
+        // 加载图片成功后才替换原页面，失败时保留当前内容。
         const img = await FabricImage.fromURL(this.images[index], {
           crossOrigin: 'anonymous',
           signal: this.abortController.signal,
@@ -522,8 +548,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
         img.set({
           scaleX: scale,
           scaleY: scale,
-          left: (this.canvas.width - img.width * scale) / 2,
-          top: (this.canvas.height - img.height * scale) / 2,
+          left: this.canvas.width / 2,
+          top: this.canvas.height / 2,
           selectable: false,
           evented: false,
         });
@@ -549,12 +575,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
+  /** 删除课件页；若删除当前页，先加载替代页。 */
   public async removeScene(index: number) {
     if (this.busy || this.disposed || index < 0 || index >= this.images.length) return;
     this.finishEditing();
     this.commit();
     if (index === this.curImageIndex && this.images.length > 1) {
-      // Load the replacement first: a network failure must not delete the current page.
+      // 先加载替代页；加载失败则不删除当前页。
       await this.setCurrentScene(index === this.images.length - 1 ? index - 1 : index + 1);
       if (this.curImageIndex === index || this.disposed) return;
     }
@@ -571,16 +598,21 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.emit('current:image', this.curImageIndex);
   }
 
+  /** 完成或取消橡皮擦手势；完成后安排历史提交。 */
   private finishErasing(remove: boolean) {
     if (this.eraser.finish(remove) && remove) this.scheduleCommit();
   }
 
-  // 初始化事件
+  /** 将 Fabric 内容事件合并为历史提交，并桥接给页面组件。 */
   private initEvent() {
-    this.canvas.on('object:added', () => this.scheduleCommit());
-    this.canvas.on('object:removed', () => this.scheduleCommit());
-    this.canvas.on('object:modified', () => this.scheduleCommit());
-    this.canvas.on('path:created', () => this.scheduleCommit());
+    for (const name of [
+      'object:added',
+      'object:removed',
+      'object:modified',
+      'path:created',
+    ] as const) {
+      this.canvas.on(name, () => this.scheduleCommit());
+    }
     this.canvas.on('text:editing:exited', (event: { target: IText | Textbox }) => {
       event.target.set({ hasControls: true, hasBorders: true });
       if (event.target === this.pendingText) {
@@ -589,7 +621,6 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       }
       this.scheduleCommit();
     });
-    // 绑定添加对象事件，将当前画布状态保存到撤销栈中
     this.canvas.on('object:added', (e: { target: FabricObject }) => {
       this.emit('object:added', e);
     });
@@ -602,14 +633,11 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       this.emit('object:removed', e);
     });
 
-    // 监听路径事件
     this.canvas.on('path:created', (e: { path: FabricObject }) => {
-      // 设置路径为可擦除
       e.path.set('erasable', this.options.erasable);
       this.emit('path:created', e);
     });
 
-    // 监听鼠标事件
     this.canvas.on('mouse:down', this.onMouseDown.bind(this));
     this.canvas.on('mouse:move', this.onMouseMove.bind(this));
     this.canvas.on('mouse:up', this.onMouseUp.bind(this));
@@ -625,11 +653,13 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     );
   }
 
+  /** 移除拖拽文字时的临时虚线框。 */
   private clearTextPreview() {
     this.textPreview?.remove();
     this.textPreview = undefined;
   }
 
+  /** 根据指针位置更新文字输入区域的虚线框。 */
   private updateTextPreview(event: any) {
     const { x, y } = event.scenePoint;
     if (!this.textDrag && Math.hypot(x - this.startX, y - this.startY) < 6) return;
@@ -661,10 +691,9 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     });
   }
 
+  /** 在指定左上角创建光标或限定宽度的文本框。 */
   private startTextEditing(x: number, y: number, width?: number) {
     const options = {
-      left: x,
-      top: y,
       fill: this.settings.color,
       fontSize: this.settings.fontSize,
       erasable: true,
@@ -677,6 +706,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       width === undefined
         ? new IText('', options)
         : new Textbox('', { ...options, width, splitByGrapheme: true });
+    text.setPositionByOrigin(new Point(x, y), 'left', 'top');
     this.pendingText = text;
     this.canvas.add(text);
     this.canvas.setActiveObject(text);
@@ -684,7 +714,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.canvas.requestRenderAll();
   }
 
-  // 鼠标按下事件处理函数
+  /** 根据当前工具开始绘制、擦除或文字拖拽。 */
   private onMouseDown(event: any) {
     if (!event.scenePoint) return;
     const { x, y } = event.scenePoint;
@@ -725,7 +755,7 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     }
   }
 
-  // 鼠标移动事件处理函数
+  /** 更新橡皮擦命中、文字预览或图形几何。 */
   private onMouseMove(event: any) {
     if (this.eraser.active && event.scenePoint) {
       this.eraser.move(new Point(event.scenePoint.x, event.scenePoint.y), event.e);
@@ -747,29 +777,42 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     switch (this.drawingTool) {
       case 'rectangle':
       case 'triangle':
-        this.currentShape.set({ left, top, width, height });
+        this.currentShape.set({ left: left + width / 2, top: top + height / 2, width, height });
         break;
       case 'circle':
         const radius = Math.sqrt(width * width + height * height) / 2;
-        this.currentShape.set({ left, top, radius });
+        this.currentShape.set({ left: left + radius, top: top + radius, radius });
         break;
       case 'ellipse':
-        this.currentShape.set({ left, top, rx: Math.abs(width / 2), ry: Math.abs(height / 2) });
+        this.currentShape.set({
+          left: left + width / 2,
+          top: top + height / 2,
+          rx: width / 2,
+          ry: height / 2,
+        });
         break;
       case 'line':
       case 'arrow':
-        this.currentShape.set({ x2: x, y2: y });
+        if (this.currentShape instanceof Polyline) {
+          this.currentShape.set('points', [
+            { x: this.startX, y: this.startY },
+            { x, y },
+          ]);
+          this.currentShape.setDimensions();
+          this.currentShape.set({
+            left: (this.startX + x) / 2,
+            top: (this.startY + y) / 2,
+          });
+        }
         break;
       default:
         break;
     }
-    // 更新边界信息
     this.currentShape.setCoords();
-    // 重新渲染
     this.canvas.requestRenderAll();
   }
 
-  // 鼠标抬起事件处理函数
+  /** 结束当前手势，并按需开始文本输入或提交快照。 */
   private onMouseUp(event: any) {
     if (this.eraser.active) {
       this.finishErasing(true);
@@ -794,14 +837,17 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.scheduleCommit();
   }
 
+  /** 导出当前画布的图片数据。 */
   public toDataURL(options?: TDataUrlOptions) {
     return this.canvas.toDataURL(options);
   }
 
+  /** 获取当前页面的 Fabric 序列化数据。 */
   public toJSON() {
     return this.canvas.toJSON();
   }
 
+  /** 加载外部快照并提交至当前页面历史。 */
   public async loadFromJSON(json: string | Record<string, unknown>): Promise<void> {
     if (this.busy || this.disposed) return;
     this.setBusy(true);
@@ -814,36 +860,36 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
     this.commit();
   }
 
+  /** 立即重绘当前画布。 */
   public renderAll(): void {
     this.canvas.renderAll();
   }
 
   /**
-   * 缩放（以画布中心点放大）
-   * @param ratio 缩放比例（0~1）
+   * 以画布逻辑中心缩放，并限制在 25% 至 400%。
+   * @param ratio 目标缩放比例。
    */
   public zoom(ratio: number = 1) {
-    // 计算缩放中心
     const point = new Point(this.canvas.width / 2, this.canvas.height / 2);
     this.canvas.zoomToPoint(point, Math.min(4, Math.max(0.25, ratio)));
   }
 
-  // 获取缩放比率
+  /** 获取画布逻辑缩放比例。 */
   public getZoom(): number {
     return this.canvas.getZoom();
   }
 
-  // 放大（以画布中心点放大）
+  /** 将画布缩放比例增加 10%。 */
   public zoomIn() {
     this.zoom(this.canvas.getZoom() * 1.1);
   }
 
-  // 缩小（以画布中心点缩小）
+  /** 将画布缩放比例减少约 9%。 */
   public zoomOut() {
     this.zoom(this.canvas.getZoom() / 1.1);
   }
 
-  // 销毁事件监听
+  /** 取消异步加载、快捷键、擦除拖影与 Fabric 画布资源。 */
   public async destroy() {
     this.clearTextPreview();
     this.finishErasing(false);

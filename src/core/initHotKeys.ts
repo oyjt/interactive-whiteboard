@@ -1,3 +1,4 @@
+/** 画布快捷键：删除、移动、撤销、重做及复制粘贴。 */
 import { ActiveSelection, Canvas, FabricObject, IText } from 'fabric';
 import hotkeys, { type HotkeysEvent } from 'hotkeys-js';
 
@@ -9,6 +10,7 @@ interface Actions {
   error: () => void;
 }
 
+/** 只在画布获得焦点且未输入文字时响应快捷键，返回解除绑定函数。 */
 export default function initHotkeys(canvas: Canvas, actions: Actions) {
   let clipboard: FabricObject | undefined;
   let offset = 0;
@@ -18,6 +20,7 @@ export default function initHotkeys(canvas: Canvas, actions: Actions) {
   element.setAttribute('aria-label', '白板画布');
   const bindings: Array<() => void> = [];
 
+  /** 包装快捷键与错误处理，并登记对应的解除绑定回调。 */
   function bind(
     keys: string,
     action: (event: KeyboardEvent, handler: HotkeysEvent) => void | Promise<void>,

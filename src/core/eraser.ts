@@ -1,4 +1,12 @@
-import { type Canvas, FabricImage, FabricObject, Line, Point, type TPointerEvent } from 'fabric';
+/** 橡皮擦手势：对象命中置灰、抬起删除及指针拖影。 */
+import {
+  type Canvas,
+  FabricImage,
+  FabricObject,
+  Polyline,
+  Point,
+  type TPointerEvent,
+} from 'fabric';
 
 const TRAIL_MS = 420;
 
@@ -10,13 +18,16 @@ export class Eraser {
   private frame?: number;
   active = false;
 
+  /** 接收要擦除的 Fabric 画布。 */
   constructor(private canvas: Canvas) {}
 
+  /** 开始手势，立即检查按下位置是否命中对象。 */
   start(point: Point, event: TPointerEvent) {
     this.active = true;
     this.move(point, event);
   }
 
+  /** 记录拖影轨迹，并将新命中的对象临时置灰。 */
   move(point: Point, event: TPointerEvent) {
     if (!this.active) return;
     this.updateTrail(event);
@@ -59,9 +70,13 @@ export class Eraser {
         point.y > top + height + 10
       )
         continue;
-      if (object instanceof Line) {
-        const { x1, y1, x2, y2 } = object.calcLinePoints();
+      if (object instanceof Polyline && object.points.length === 2) {
+        const [startPoint, endPoint] = object.points;
         const [a, b, c, d, e, f] = object.calcTransformMatrix();
+        const x1 = startPoint.x - object.pathOffset.x;
+        const y1 = startPoint.y - object.pathOffset.y;
+        const x2 = endPoint.x - object.pathOffset.x;
+        const y2 = endPoint.y - object.pathOffset.y;
         const start = new Point(a * x1 + c * y1 + e, b * x1 + d * y1 + f);
         const end = new Point(a * x2 + c * y2 + e, b * x2 + d * y2 + f);
         const dx = end.x - start.x;
@@ -98,6 +113,7 @@ export class Eraser {
     if (changed) this.canvas.requestRenderAll();
   }
 
+  /** 在交互层上方创建或更新橡皮擦拖影。 */
   private updateTrail(event: TPointerEvent) {
     if (!this.trail) {
       const overlay = document.createElement('canvas');
@@ -124,6 +140,7 @@ export class Eraser {
     if (this.frame === undefined) this.frame = requestAnimationFrame(this.renderTrail);
   }
 
+  /** 逐帧绘制并淡出最近的指针轨迹。 */
   private renderTrail = () => {
     this.frame = undefined;
     const canvas = this.trail;

@@ -1,3 +1,4 @@
+/** 画笔、图形和文字的设置校验与浏览器持久化。 */
 export interface BrushSettings {
   color: string;
   width: number;
@@ -11,6 +12,7 @@ export const DEFAULT_BRUSH_SETTINGS: BrushSettings = {
 };
 export const BRUSH_STORAGE_KEY = 'interactive-whiteboard:brush:v1';
 
+/** 校验设置数据，将非法输入回退到安全的颜色、线宽和字号。 */
 export function normalizeBrushSettings(value: unknown): BrushSettings {
   const data = value && typeof value === 'object' ? (value as Partial<BrushSettings>) : {};
   const clamp = (value: unknown, fallback: number, min: number, max: number) =>
@@ -27,6 +29,7 @@ export function normalizeBrushSettings(value: unknown): BrushSettings {
   };
 }
 
+/** 读取本地设置；私密模式或损坏的数据不会中断绘图。 */
 export function readBrushSettings(): BrushSettings {
   try {
     return normalizeBrushSettings(JSON.parse(localStorage.getItem(BRUSH_STORAGE_KEY) || 'null'));
@@ -35,10 +38,11 @@ export function readBrushSettings(): BrushSettings {
   }
 }
 
+/** 保存校验后的设置；存储不可用时保持当前绘图可用。 */
 export function saveBrushSettings(settings: BrushSettings) {
   try {
     localStorage.setItem(BRUSH_STORAGE_KEY, JSON.stringify(normalizeBrushSettings(settings)));
   } catch {
-    /* Private mode or full storage must not interrupt drawing. */
+    // 私密模式或存储空间不足时不影响画布操作。
   }
 }

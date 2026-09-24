@@ -4,17 +4,21 @@ export class SnapshotHistory {
   private index = 0;
   private limit: number;
 
+  /** 以初始快照建立页面历史，并设置编辑数量上限。 */
   constructor(initial: string, limit = 50) {
     this.states = [initial];
     this.limit = limit;
   }
 
+  /** 读取当前历史位置的快照。 */
   get current() {
     return this.states[this.index];
   }
+  /** 当前是否存在可撤销的快照。 */
   get canUndo() {
     return this.index > 0;
   }
+  /** 当前是否存在可重做的快照。 */
   get canRedo() {
     return this.index < this.states.length - 1;
   }
@@ -33,10 +37,12 @@ export class SnapshotHistory {
     return true;
   }
 
+  /** 预览相邻快照，不改变历史位置。 */
   peek(direction: -1 | 1) {
     return this.states[this.index + direction];
   }
 
+  /** 在目标快照存在时移动历史位置。 */
   move(direction: -1 | 1) {
     if (this.peek(direction) !== undefined) this.index += direction;
   }

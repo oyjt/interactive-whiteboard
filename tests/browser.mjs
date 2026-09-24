@@ -196,6 +196,13 @@ try {
       })),
       { color: '#a855f7', width: 5 },
     );
+    assert.deepEqual(
+      await board((b) => ({
+        origin: [b.getObjects()[0].originX, b.getObjects()[0].originY],
+        left: Math.round(b.getObjects()[0].getBoundingRect().left),
+      })),
+      { origin: ['center', 'center'], left: 398 },
+    );
     await page.getByRole('button', { name: '撤销', exact: true }).click();
     await count(0);
     await idle();
@@ -251,6 +258,7 @@ try {
   await count(1);
   await idle();
   assert.equal(await board((b) => b.getObjects()[0].text), '单击输入文字');
+  assert.ok(Math.abs((await board((b) => b.getObjects()[0].getBoundingRect().left)) - 400) < 3);
   await page.getByRole('button', { name: '撤销', exact: true }).click();
   await count(0);
   await idle();
@@ -369,6 +377,13 @@ try {
   await page.getByRole('button', { name: '打开示例课件', exact: true }).click();
   await idle();
   await count(0);
+  assert.deepEqual(
+    await board((b) => ({
+      left: b.getCanvas().backgroundImage.left,
+      top: b.getCanvas().backgroundImage.top,
+    })),
+    { left: 400, top: 225 },
+  );
   await page.getByRole('button', { name: '笔', exact: true }).click();
   await draw(400, 180);
   await count(1);
@@ -444,7 +459,9 @@ try {
   );
   await page.mouse.up();
   await count(originalCount + 1);
-  assert.ok(Math.abs((await board((b) => b.getObjects().at(-1).left)) - 400) < 12);
+  assert.ok(
+    Math.abs((await board((b) => b.getObjects().at(-1).getBoundingRect().left)) - 400) < 12,
+  );
   console.log('PASS responsive canvases and horizontal mobile toolbar');
   await page.evaluate(() => document.querySelector('#app').__vue_app__.unmount());
   await page.waitForTimeout(100);

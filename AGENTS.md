@@ -15,7 +15,7 @@
 | `src/App.vue` | 唯一的页面入口：画布生命周期、工具栏布局、课件与 PNG 操作。 |
 | `src/core/index.ts` | Fabric 绘图工具、事件、场景与画布操作；内容提交通过 `content:changed` 通知外部。 |
 | `src/core/preview.ts` | 接收内容快照、模拟传输、串行加载下方预览并释放资源。 |
-| `src/core/history.ts`、`brushSettings.ts`、`objects/Arrow.ts`、`eraser.ts` | 历史、配置、可序列化箭头与橡皮擦手势。 |
+| `src/core/history.ts`、`brushSettings.ts`、`objects/Arrow.ts`、`eraser.ts` | 历史、配置、基于 Polyline 的可序列化箭头与橡皮擦手势。 |
 | `src/utils/previewSync.ts` | gzip、Base64 编解码的本地模拟；注释标明未来可能的发送与接收位置。 |
 | `src/components/` | 工具栏、设置、翻页、课件预览及撤销控制。 |
 | `src/assets/ppt/`、`src/assets/editor/` | 示例课件和画布控件图像；组件专用图标留在对应组件的 `image/` 下，共用图标放 `src/assets/`。 |
@@ -29,8 +29,9 @@
 
 1. `after:render` 可能由指针、选框和拖影触发，不能作为同步触发条件。内容提交、撤销和页面切换才处理快照。
 2. 将 Fabric JSON 做 gzip 和 Base64 编码，再立即解码、解压，串行调用预览的 `loadFromJSON`，保留最新待处理快照。注释里的 WebSocket 只是将来替换模拟步骤的标记，项目中没有连接或消息事件。
-3. Fabric 7 默认对象原点改为中心；本项目在 `src/core/index.ts` 显式设置左上角原点以兼容既有绘制坐标。调整绘制/序列化时覆盖箭头、文字、橡皮擦及撤销回归。
+3. Fabric 7 默认对象原点为中心；用中心坐标绘制图形与居中图片，左上角输入坐标通过 `setPositionByOrigin` 转换，不要修改全局 `originX` / `originY` 默认值。调整绘制/序列化时覆盖箭头、文字、橡皮擦及撤销回归。
 4. 注册的 `Arrow` 类型和 `erasable` 自定义属性必须在加载快照前就绪；课件图片与页面历史相互独立。
+   普通直线和箭头共用 Fabric `Polyline` 两点结构；修改端点时同时重算对象尺寸和中心位置，橡皮擦通过 `pathOffset` 换算命中位置。
 5. 此处仅验证序列化、压缩和预览恢复。真正的网络同步还需单独设计协议、鉴权、重连和并发编辑处理。
 
 ## 样式与质量门槛

@@ -1,7 +1,4 @@
-/*
- * 控制条样式
- */
-
+/** 自定义 Fabric 对象控制点与删除按钮。 */
 import {
   util,
   Control,
@@ -37,6 +34,7 @@ const deleteIcon =
 const delImgIcon = document.createElement('img');
 delImgIcon.src = deleteIcon;
 
+/** 生成跟随对象旋转的 Fabric 控制点图标绘制器。 */
 function createIconRenderer(icon: HTMLImageElement, width: number, height: number) {
   return (
     ctx: CanvasRenderingContext2D,
@@ -53,7 +51,7 @@ function createIconRenderer(icon: HTMLImageElement, width: number, height: numbe
   };
 }
 
-// Controls 初始化
+/** 安装缩放、旋转与删除控制点的图标和行为。 */
 function initControls() {
   // 中间横杠
   const mlControl = new Control({
@@ -142,6 +140,7 @@ function initControls() {
 
   // 删除
   // 删除操作的 handler
+  /** 删除当前选中对象，Fabric 对象移除事件将触发历史提交。 */
   function deleteObjectHandler(
     _eventData: TPointerEvent,
     transform: Transform,
