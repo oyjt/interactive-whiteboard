@@ -63,6 +63,18 @@ try {
     'column',
   );
   assert.equal(await page.getByRole('button', { name: '切换工具设置' }).count(), 0);
+  for (const name of ['笔', '文本', '三角形', '圆形', '矩形', '直线', '箭头']) {
+    assert.equal(
+      await page.getByRole('button', { name, exact: true }).getByTestId('settings-corner').count(),
+      1,
+    );
+  }
+  for (const name of ['选择', '橡皮擦', '清除批注']) {
+    assert.equal(
+      await page.getByRole('button', { name, exact: true }).getByTestId('settings-corner').count(),
+      0,
+    );
+  }
   assert.notEqual(
     await page
       .getByRole('button', { name: '笔', exact: true })
@@ -75,6 +87,22 @@ try {
       .getByRole('button', { name: '笔', exact: true })
       .evaluate((el) => getComputedStyle(el).color),
     'rgb(37, 99, 235)',
+  );
+  assert.equal(
+    await page
+      .getByRole('button', { name: '笔', exact: true })
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+    'rgba(0, 0, 0, 0)',
+  );
+  assert.deepEqual(
+    await page
+      .getByRole('button', { name: '笔', exact: true })
+      .getByTestId('settings-corner')
+      .evaluate((el) => ({
+        width: getComputedStyle(el).borderBottomWidth,
+        color: getComputedStyle(el).borderBottomColor,
+      })),
+    { width: '4px', color: 'rgb(37, 99, 235)' },
   );
   await page.getByRole('button', { name: '笔', exact: true }).click();
   assert.equal(

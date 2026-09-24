@@ -12,7 +12,7 @@
         v-for="(item, index) in tools"
         :key="item.shapeType"
         type="button"
-        class="h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:bg-blue-50 aria-pressed:text-[#2563eb]"
+        class="relative h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:text-[#2563eb]"
         :title="`${item.name} (${index + 1})`"
         :aria-label="item.name"
         :aria-pressed="item.shapeType === currentShapType"
@@ -27,6 +27,12 @@
         <span
           class="tool-icon block h-6 w-6 bg-current"
           :style="{ maskImage: `url(&quot;${item.icon}&quot;)` }"
+          aria-hidden="true"
+        ></span>
+        <span
+          v-if="hasSettings(item.shapeType)"
+          data-testid="settings-corner"
+          class="pointer-events-none absolute right-0 bottom-0 size-0 border-b-[4px] border-l-[4px] border-b-current border-l-transparent"
           aria-hidden="true"
         ></span>
       </button>
