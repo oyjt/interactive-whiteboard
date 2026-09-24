@@ -2,6 +2,8 @@
 
 基于 Vue 3、TypeScript、Fabric 7 和 Tailwind CSS 4 的互动白板示例。包含画笔与图形、文字、橡皮擦、课件翻页和同步预览。
 
+[English](README.en.md)
+
 ## 演示
 
 ![桌面端互动白板：绘图工具、画笔设置和同步预览](example/demo.png)
@@ -61,3 +63,7 @@ TypeScript 使用 Bundler 模块解析，`tsconfig.json` 同时检查应用代�
 `test` 覆盖历史、设置、箭头序列化和 gzip/Base64 模拟往返；`test:browser` 启动 Vite，验证实际绘制、预览同步、课件与导出。CI 在 Node 24 上运行这些检查。TypeScript 暂固定 5.9.3，因为当前 vue-tsc 版本尚不能加载 TypeScript 7 的内部入口。
 
 代码入口见 [AGENTS.md](AGENTS.md)，历史调整记录见 [调整清单](docs/adjustment-plan.md)。
+
+## 许可协议
+
+本项目采用 [MIT 协议](LICENSE)。
