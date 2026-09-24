@@ -1,7 +1,10 @@
 <template>
-  <div ref="toolbarRoot" class="tools-layout flex items-center gap-2">
+  <div
+    ref="toolbarRoot"
+    class="flex items-center gap-2 max-[600px]:flex-col max-[600px]:items-start"
+  >
     <div
-      class="tool-mid-box-left flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md"
+      class="flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md max-[600px]:w-auto max-[600px]:max-w-[calc(100vw-40px)] max-[600px]:flex-row max-[600px]:overflow-x-auto max-[600px]:px-1"
       role="toolbar"
       aria-label="绘图工具"
     >
@@ -9,7 +12,7 @@
         v-for="(item, index) in tools"
         :key="item.shapeType"
         type="button"
-        class="tool-box-cell-box-left h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:bg-blue-50 aria-pressed:text-[#2563eb]"
+        class="h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:bg-blue-50 aria-pressed:text-[#2563eb]"
         :title="`${item.name} (${index + 1})`"
         :aria-label="item.name"
         :aria-pressed="item.shapeType === currentShapType"
@@ -29,7 +32,7 @@
       </button>
       <button
         type="button"
-        class="tool-box-cell-box-left h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50"
+        class="h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50"
         title="清除批注（保留背景）"
         aria-label="清除批注"
         :disabled="busy"
@@ -40,6 +43,7 @@
     </div>
     <BrushSettings
       v-if="settingsOpen && hasSettings(currentShapType)"
+      class="max-[600px]:absolute max-[600px]:top-11 max-[600px]:left-0 max-[600px]:z-[5]"
       :model-value="settings"
       :tool="currentShapType"
       @update:model-value="updateSettings"

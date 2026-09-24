@@ -5,7 +5,7 @@
 ## 项目边界
 
 - Vue 3 + TypeScript + Vite 8，画布使用 Fabric 7，样式使用 Tailwind CSS 4；Node 24、pnpm 10.20.0。
-- 保持现有页面的上下两块画布与纵向工具栏，不要为预览嵌套第二个 Vue 应用或 iframe。
+- 保持现有页面的上下两块画布；桌面为纵向工具栏，手机为横向工具栏。不要为预览嵌套第二个 Vue 应用或 iframe。
 - 同步预览只做 gzip/Base64 本地模拟，不连接 WebSocket、不维护服务端与协作状态。
 
 ## 目录及职责
@@ -36,7 +36,7 @@
 ## 样式与质量门槛
 
 - 新布局和常用 UI 样式直接写在 Vue 模板的 Tailwind v4 `class` 中，不使用 `@apply`；课件面板与 Fabric 覆盖层的特殊几何样式可使用普通 CSS。全局入口放 `src/styles/index.css`，不要新增 Sass、Tailwind v3 配置或不必要的 UI 依赖。
-- 画布保持 800×450 的逻辑尺寸；窄屏只在画布容器内横向滚动，桌面宽度不应出现无意义的 2px 滚动。
+- 画布保持 800×450 的逻辑尺寸，通过 Fabric 的 `cssOnly` 设置让两块画布按容器宽度等比例显示。窄屏不应出现页面横向滚动，触点要按逻辑坐标正确映射。
 - 保留工具栏行为和可访问名称、选中态及现有页面结构。更新图标资源时检查 mask 与颜色继承。
 - 提交前运行 `pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build` 和 `pnpm test:browser`；浏览器检查会验证编码往返后的预览。无法运行某项时明确说明原因，不能将未运行写成通过。
 - 使用 Oxlint 检查 TS、JS 与 Vue 脚本，使用 Oxfmt 格式化代码；关键接口与特殊时序用中文 JSDoc 描述，不给每一行添加注释。

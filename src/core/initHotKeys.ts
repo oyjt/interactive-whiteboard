@@ -16,8 +16,6 @@ export default function initHotkeys(canvas: Canvas, actions: Actions) {
   const element = canvas.upperCanvasEl;
   element.tabIndex = 0;
   element.setAttribute('aria-label', '白板画布');
-  const focus = () => element.focus({ preventScroll: true });
-  element.addEventListener('pointerdown', focus);
   const bindings: Array<() => void> = [];
 
   function bind(
@@ -85,7 +83,6 @@ export default function initHotkeys(canvas: Canvas, actions: Actions) {
 
   return () => {
     disposed = true;
-    element.removeEventListener('pointerdown', focus);
     bindings.forEach((unbind) => unbind());
     clipboard = undefined;
   };

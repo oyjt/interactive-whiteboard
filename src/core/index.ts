@@ -218,6 +218,8 @@ class FabricCanvas extends EventEmitter<FabricEvents> {
       fireMiddleClick: false,
       fireRightClick: false,
     });
+    // 只缩放显示尺寸，保持 800×450 的对象坐标、课件背景和历史快照不变。
+    this.canvas.setDimensions({ width: '100%', height: '100%' }, { cssOnly: true });
     this.eraser = new Eraser(this.canvas);
     this.options.stroke = this.settings.color;
     this.options.strokeWidth = this.settings.width;

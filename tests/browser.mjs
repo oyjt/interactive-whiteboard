@@ -52,12 +52,14 @@ try {
   await page.goto('http://127.0.0.1:5173/interactive-whiteboard/');
   await page.waitForSelector('.upper-canvas');
   assert.equal(
-    await page.locator('.canvas-scroll').evaluate((el) => el.scrollWidth > el.clientWidth),
+    await page.getByTestId('canvas-scroll').evaluate((el) => el.scrollWidth > el.clientWidth),
     false,
   );
   await page.getByText('gzip / Base64 本地模拟 · 内容变更后更新').waitFor();
   assert.equal(
-    await page.locator('.tool-mid-box-left').evaluate((el) => getComputedStyle(el).flexDirection),
+    await page
+      .getByRole('toolbar', { name: '绘图工具' })
+      .evaluate((el) => getComputedStyle(el).flexDirection),
     'column',
   );
   assert.equal(await page.getByRole('button', { name: '切换工具设置' }).count(), 0);
@@ -91,11 +93,21 @@ try {
     'false',
   );
   await page.getByRole('button', { name: '笔', exact: true }).click();
-  await page.locator('.app-header h1').click();
+  await page.getByRole('heading', { name: '互动白板' }).click();
   assert.equal(
     await page.getByRole('button', { name: '笔', exact: true }).getAttribute('aria-expanded'),
     'false',
   );
+  await board((b) => b.setDrawingTool('select'));
+  await page.locator('.upper-canvas').click({ position: { x: 350, y: 120 } });
+  assert.deepEqual(
+    await page.locator('.upper-canvas').evaluate((el) => ({
+      focused: document.activeElement === el,
+      outline: getComputedStyle(el).outlineStyle,
+    })),
+    { focused: true, outline: 'none' },
+  );
+  await board((b) => b.setDrawingTool('pencil'));
   await board((b) => b.getCanvas().upperCanvasEl.focus());
   await page.keyboard.press('1');
   assert.equal(await board((b) => b.getDrawingTool()), 'select');
@@ -141,7 +153,7 @@ try {
   );
   assert.equal(await page.getByRole('region', { name: '橡皮擦设置' }).count(), 0);
   await page.getByRole('button', { name: '橡皮擦', exact: true }).click();
-  assert.equal(await page.locator('.brush-settings').count(), 0);
+  assert.equal(await page.getByRole('region', { name: /设置/ }).count(), 0);
   assert.equal(await board((b) => b.getCanvas().isDrawingMode), false);
   await page.getByRole('button', { name: '笔', exact: true }).click();
   assert.equal(await board((b) => b.getCanvas().freeDrawingBrush.width), 10);
@@ -395,6 +407,7 @@ try {
   await idle();
   assert.equal(await board((b) => b.getScenes().length), 5);
   console.log('PASS thumbnail navigation and page deletion');
+  await page.locator('.menu-head-btn').click();
   assert.deepEqual(errors, []);
   if (process.env.SCREENSHOT_PATH)
     await page.screenshot({ path: process.env.SCREENSHOT_PATH, fullPage: true });
@@ -403,12 +416,36 @@ try {
     await page.evaluate(() => ({
       pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       canvasScrolls:
-        document.querySelector('.canvas-scroll').scrollWidth >
-        document.querySelector('.canvas-scroll').clientWidth,
+        document.querySelector('[data-testid="canvas-scroll"]').scrollWidth >
+        document.querySelector('[data-testid="canvas-scroll"]').clientWidth,
+      frames: [document.querySelector('#canvas'), document.querySelector('#canvas2')].map(
+        (canvas) => Math.round(canvas.getBoundingClientRect().width),
+      ),
     })),
-    { pageOverflows: false, canvasScrolls: true },
+    { pageOverflows: false, canvasScrolls: false, frames: [366, 366] },
   );
-  console.log('PASS desktop canvas fits and mobile scroll stays inside canvas');
+  assert.equal(
+    await page
+      .getByRole('toolbar', { name: '绘图工具' })
+      .evaluate((el) => getComputedStyle(el).flexDirection),
+    'row',
+  );
+  const mobileCanvas = await page.locator('.upper-canvas').boundingBox();
+  const originalCount = await board((b) => b.getObjects().length);
+  await page.mouse.move(
+    mobileCanvas.x + mobileCanvas.width * 0.5,
+    mobileCanvas.y + mobileCanvas.height * 0.55,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    mobileCanvas.x + mobileCanvas.width * 0.65,
+    mobileCanvas.y + mobileCanvas.height * 0.65,
+    { steps: 10 },
+  );
+  await page.mouse.up();
+  await count(originalCount + 1);
+  assert.ok(Math.abs((await board((b) => b.getObjects().at(-1).left)) - 400) < 12);
+  console.log('PASS responsive canvases and horizontal mobile toolbar');
   await page.evaluate(() => document.querySelector('#app').__vue_app__.unmount());
   await page.waitForTimeout(100);
   assert.deepEqual(errors, []);

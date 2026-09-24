@@ -1,10 +1,10 @@
 <template>
   <section
-    class="brush-settings w-[210px] rounded-xl border border-slate-200 bg-white p-4 text-left text-slate-800 shadow-lg"
+    class="w-[210px] rounded-xl border border-slate-200 bg-white p-4 text-left text-slate-800 shadow-lg"
     :aria-label="`${toolName}设置`"
   >
-    <div class="settings-title mb-4 text-sm font-semibold">{{ toolName }}设置</div>
-    <label class="size-label my-2.5 flex items-center justify-between text-xs" :for="sliderId">
+    <div class="mb-4 text-sm font-semibold">{{ toolName }}设置</div>
+    <label class="my-2.5 flex items-center justify-between text-xs" :for="sliderId">
       {{ tool === 'text' ? '文字大小' : tool === 'pencil' ? '画笔尺寸' : '线宽' }}
       <output class="tabular-nums text-slate-500"
         >{{ tool === 'text' ? model.fontSize : model.width }} px</output
@@ -20,7 +20,7 @@
       :value="tool === 'text' ? model.fontSize : model.width"
       @input="updateSize(Number(($event.target as HTMLInputElement).value))"
     />
-    <div class="size-presets mt-2 mb-[18px] flex gap-1.5">
+    <div class="mt-2 mb-[18px] flex gap-1.5">
       <button
         v-for="size in tool === 'text' ? [16, 24, 32, 48] : [2, 5, 10, 20]"
         :key="size"
@@ -32,11 +32,11 @@
         {{ size }}
       </button>
     </div>
-    <div class="color-label my-2.5 flex items-center justify-between text-xs">
+    <div class="my-2.5 flex items-center justify-between text-xs">
       {{ tool === 'text' ? '文字颜色' : tool === 'pencil' ? '画笔颜色' : '线条颜色' }}
       <span class="tabular-nums text-slate-500">{{ model.color.toUpperCase() }}</span>
     </div>
-    <div class="color-presets flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2">
       <button
         v-for="color in colors"
         :key="color"
@@ -53,7 +53,7 @@
           >✓</span
         >
       </button>
-      <label class="custom-color flex items-center gap-2 text-xs text-slate-500"
+      <label class="flex items-center gap-2 text-xs text-slate-500"
         >自定义
         <input
           class="h-[26px] w-8 cursor-pointer border-0 bg-transparent p-0"
@@ -64,7 +64,7 @@
       /></label>
     </div>
     <div
-      class="stroke-preview mt-3.5 flex h-20 items-center justify-center overflow-hidden rounded-lg bg-slate-100"
+      class="mt-3.5 flex h-20 items-center justify-center overflow-hidden rounded-lg bg-slate-100"
       :aria-label="`${toolName}预览`"
     >
       <span v-if="tool === 'text'" :style="{ color: model.color, fontSize: `${model.fontSize}px` }"

@@ -9,6 +9,7 @@ type Snapshot = ReturnType<FabricCanvas['toJSON']>;
 /** 串行恢复模拟传输的快照；加载中只保留最新内容，卸载时等待加载结束。 */
 export function createPreview(canvasId: string, onError: (message: string) => void) {
   const canvas = new StaticCanvas(canvasId);
+  canvas.setDimensions({ width: '100%', height: '100%' }, { cssOnly: true });
   let pending: Snapshot | undefined;
   let loading: Promise<void> | undefined;
   let disposed = false;

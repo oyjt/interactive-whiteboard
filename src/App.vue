@@ -1,11 +1,11 @@
 <template>
-  <main class="whiteboard-app mx-auto max-w-[850px] p-6 max-[600px]:p-3">
-    <header class="app-header mb-5 flex items-center justify-between gap-3 max-[600px]:items-start">
+  <main class="mx-auto max-w-[850px] p-6 max-[600px]:p-3">
+    <header class="mb-5 flex items-center justify-between gap-3 max-[600px]:items-start">
       <div>
         <h1 class="text-[22px] tracking-[-.5px]">互动白板</h1>
         <p class="mt-1 text-xs text-slate-500">记录想法，自由书写</p>
       </div>
-      <div class="header-actions flex gap-2 max-[600px]:flex-wrap max-[600px]:justify-end">
+      <div class="flex gap-2 max-[600px]:flex-wrap max-[600px]:justify-end">
         <button
           class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
           :disabled="busy"
@@ -22,25 +22,25 @@
         </button>
       </div>
     </header>
-    <p
-      v-if="error"
-      class="error-message rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700"
-      role="alert"
-    >
+    <p v-if="error" class="rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700" role="alert">
       {{ error }} <button @click="error = ''">关闭</button>
     </p>
-    <div class="canvas-scroll overflow-x-auto">
+    <div data-testid="canvas-scroll" class="overflow-x-auto">
       <div
-        class="canvas-wrap relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white"
+        class="relative aspect-[16/9] w-full max-w-[800px] overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-[#dbe3ee] max-[600px]:z-[2] max-[600px]:overflow-visible"
       >
-        <div class="tool-box-out absolute top-1/2 left-2 z-[3] -translate-y-1/2"><ToolBox /></div>
-        <div class="redo-undo-box absolute bottom-2 left-2 z-[3]"><RedoUndo /></div>
-        <div class="zoom-controller-box absolute bottom-2 left-[76px] z-[3]">
+        <div
+          class="absolute top-1/2 left-2 z-[3] -translate-y-1/2 max-[600px]:top-2 max-[600px]:translate-y-0"
+        >
+          <ToolBox />
+        </div>
+        <div class="absolute bottom-2 left-2 z-[3]"><RedoUndo /></div>
+        <div class="absolute bottom-2 left-[76px] z-[3]">
           <ZoomController />
         </div>
         <div
           v-show="hasScenes"
-          class="page-controller-box absolute right-2 bottom-2 z-[3] flex items-center rounded bg-white p-1"
+          class="absolute right-2 bottom-2 z-[3] flex items-center rounded bg-white p-1"
         >
           <PageController />
           <button aria-label="页面预览" @click="isPreviewShow = !isPreviewShow">
@@ -49,23 +49,23 @@
         </div>
         <div
           v-if="hasScenes && isPreviewShow"
-          class="preview-controller-box absolute top-0 right-0 z-[4] h-full w-60 shadow-lg"
+          class="absolute top-0 right-0 z-[4] h-full w-60 shadow-lg"
         >
           <PreviewController @handle-preview-state="isPreviewShow = $event" />
         </div>
         <canvas id="canvas" width="800" height="450"></canvas>
       </div>
-      <div class="mirror-heading mt-5 mb-2 text-[13px]">
+      <div class="mt-5 mb-2 text-[13px]">
         同步预览
         <span class="ml-2 text-[11px] text-slate-400">gzip / Base64 本地模拟 · 内容变更后更新</span>
       </div>
       <div
-        class="canvas-wrap mirror-wrap relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white"
+        class="relative aspect-[16/9] w-full max-w-[800px] overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-[#dbe3ee]"
       >
         <canvas id="canvas2" width="800" height="450"></canvas>
       </div>
     </div>
-    <p class="usage-hint text-[11px] leading-[1.8] text-slate-500">
+    <p class="text-[11px] leading-[1.8] text-slate-500">
       画笔、图形和文字均可设置 · 文字拖拽指定宽度 · 橡皮擦松手删除对象
     </p>
   </main>
