@@ -30,7 +30,7 @@
         class="relative aspect-[16/9] w-full max-w-[800px] overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-[#dbe3ee] max-[600px]:z-[2] max-[600px]:overflow-visible"
       >
         <div
-          class="absolute top-1/2 left-2 z-[3] -translate-y-1/2 max-[600px]:top-2 max-[600px]:translate-y-0"
+          class="absolute top-1/2 left-2 z-[3] -translate-y-1/2 max-[600px]:top-2 max-[600px]:z-[5] max-[600px]:translate-y-0"
         >
           <ToolBox />
         </div>

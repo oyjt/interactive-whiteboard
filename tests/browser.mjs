@@ -40,6 +40,14 @@ const idle = () =>
       !document.querySelector('#app').__vue_app__._instance.setupState.canvas.getHistoryState()
         .busy,
   );
+async function setSize(region, value) {
+  const slider = page.getByRole('region', { name: region }).getByRole('slider');
+  await slider.evaluate((input, size) => {
+    input.value = String(size);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+  assert.equal(Number(await slider.inputValue()), value);
+}
 async function draw(x = 400, y = 120, dx = 140, dy = 40) {
   const box = await page.locator('.upper-canvas').boundingBox();
   await page.mouse.move(box.x + x, box.y + y);
@@ -109,6 +117,23 @@ try {
     await page.getByRole('button', { name: '笔', exact: true }).getAttribute('aria-expanded'),
     'true',
   );
+  const panelBounds = await page.getByRole('region', { name: '画笔设置' }).boundingBox();
+  const pencilBounds = await page.getByRole('button', { name: '笔', exact: true }).boundingBox();
+  assert.ok(panelBounds.height < 170 && panelBounds.x > pencilBounds.x + pencilBounds.width);
+  assert.equal(
+    await page
+      .getByRole('region', { name: '画笔设置' })
+      .getByRole('slider', { name: '画笔尺寸' })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .getByRole('region', { name: '画笔设置' })
+      .getByRole('group', { name: '画笔颜色' })
+      .count(),
+    1,
+  );
   await page.getByRole('button', { name: '笔', exact: true }).click();
   assert.equal(
     await page.getByRole('button', { name: '笔', exact: true }).getAttribute('aria-expanded'),
@@ -152,7 +177,7 @@ try {
     await page.getByRole('button', { name: '笔', exact: true }).getAttribute('aria-expanded'),
     'true',
   );
-  await page.getByRole('button', { name: '10', exact: true }).click();
+  await setSize('画笔设置', 10);
   await page.getByRole('button', { name: '选择颜色 #3b82f6', exact: true }).click();
   assert.equal(await page.getByRole('button', { name: '撤销', exact: true }).isDisabled(), true);
   await draw();
@@ -207,10 +232,7 @@ try {
       );
       await page.getByRole('button', { name, exact: true }).click();
     }
-    await page
-      .getByRole('region', { name: `${name}设置` })
-      .getByRole('button', { name: '5', exact: true })
-      .click();
+    await setSize(`${name}设置`, 5);
     await page
       .getByRole('region', { name: `${name}设置` })
       .getByRole('button', { name: '选择颜色 #a855f7' })
@@ -237,10 +259,7 @@ try {
   }
   console.log('PASS line, arrow and shape color/width settings');
   await page.getByRole('button', { name: '文本', exact: true }).click();
-  await page
-    .getByRole('region', { name: '文字设置' })
-    .getByRole('button', { name: '32', exact: true })
-    .click();
+  await setSize('文字设置', 32);
   await page
     .getByRole('region', { name: '文字设置' })
     .getByRole('button', { name: '选择颜色 #22c55e' })
@@ -489,6 +508,22 @@ try {
   await count(originalCount + 1);
   assert.ok(
     Math.abs((await board((b) => b.getObjects().at(-1).getBoundingRect().left)) - 400) < 12,
+  );
+  await page.getByRole('button', { name: '箭头', exact: true }).click();
+  const mobilePanel = await page.getByRole('region', { name: '箭头设置' }).boundingBox();
+  assert.ok(mobilePanel.x >= 0 && mobilePanel.x + mobilePanel.width <= 390);
+  assert.ok(mobilePanel.y >= mobileCanvas.y);
+  assert.equal(
+    await page
+      .getByRole('region', { name: '箭头设置' })
+      .locator('input[type="color"]')
+      .evaluate((input) => {
+        const rect = input.getBoundingClientRect();
+        return (
+          document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === input
+        );
+      }),
+    true,
   );
   console.log('PASS responsive canvases and horizontal mobile toolbar');
   await page.evaluate(() => document.querySelector('#app').__vue_app__.unmount());
