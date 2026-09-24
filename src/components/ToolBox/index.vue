@@ -1,241 +1,229 @@
 <template>
-    <div class="tool-mid-box-left">
-        <div class="tool-box-cell-box-left"  v-for="item in tools" :key="item.shapeType">
-            <div class="tool-box-cell"
-                    @click="clickAppliance(item.shapeType)">
-                <img :src="item.shapeType === currentShapType ? item.iconActive : item.icon" :alt="item.name"/>
-            </div>
-        </div>
-        <div class="tool-box-cell-box-left">
-            <div class="tool-box-cell"
-                    @click="clickClear">
-                <img :src="clear" alt="清屏"/>
-            </div>
-        </div>
+  <div
+    ref="toolbarRoot"
+    class="flex items-center gap-2 max-[600px]:flex-col max-[600px]:items-start"
+  >
+    <div
+      class="flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md max-[600px]:w-auto max-[600px]:max-w-[calc(100vw-40px)] max-[600px]:flex-row max-[600px]:overflow-x-auto max-[600px]:px-1"
+      role="toolbar"
+      aria-label="绘图工具"
+    >
+      <button
+        v-for="(item, index) in tools"
+        :key="item.shapeType"
+        type="button"
+        class="relative h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50 aria-pressed:text-[#2563eb]"
+        :title="`${item.name} (${index + 1})`"
+        :aria-label="item.name"
+        :aria-pressed="item.shapeType === currentShapType"
+        :aria-expanded="
+          hasSettings(item.shapeType)
+            ? item.shapeType === currentShapType && settingsOpen
+            : undefined
+        "
+        :disabled="busy"
+        @click="clickAppliance(item.shapeType)"
+      >
+        <span
+          class="tool-icon block h-6 w-6 bg-current"
+          :style="{ maskImage: `url(&quot;${item.icon}&quot;)` }"
+          aria-hidden="true"
+        ></span>
+        <span
+          v-if="hasSettings(item.shapeType)"
+          data-testid="settings-corner"
+          class="pointer-events-none absolute right-0 bottom-0 size-0 border-b-[4px] border-l-[4px] border-b-current border-l-transparent"
+          aria-hidden="true"
+        ></span>
+      </button>
+      <button
+        type="button"
+        class="h-8 w-8 shrink-0 rounded p-1 text-[#444e60] hover:bg-blue-50"
+        title="清除批注（保留背景）"
+        aria-label="清除批注"
+        :disabled="busy"
+        @click="clickClear"
+      >
+        <img class="h-6 w-6" :src="clear" alt="" />
+      </button>
     </div>
+    <BrushSettings
+      v-if="settingsOpen && hasSettings(currentShapType)"
+      class="max-[600px]:absolute max-[600px]:top-11 max-[600px]:left-0 max-[600px]:z-[5]"
+      :model-value="settings"
+      :tool="currentShapType"
+      @update:model-value="updateSettings"
+    />
+  </div>
 </template>
 <script setup lang="ts">
-import { inject, onMounted, ref, Ref } from 'vue'
-import FabricCanvas, { DrawingTool } from '@/core'
-import selector from "./image/selector.svg";
-import selectorActive from "./image/selector-active.svg";
-import pen from "./image/pencil.svg";
-import penActive from "./image/pencil-active.svg";
-import text from "./image/text.svg";
-import textActive from "./image/text-active.svg";
-import eraser from "./image/eraser.svg";
-import eraserActive from "./image/eraser-active.svg";
-import arrow from "./image/arrow.svg";
-import arrowActive from "./image/arrow-active.svg";
-import ellipse from "./image/ellipse.svg";
-import ellipseActive from "./image/ellipse-active.svg";
-import rectangle from "./image/rectangle.svg";
-import rectangleActive from "./image/rectangle-active.svg";
-import straight from "./image/straight.svg";
-import straightActive from "./image/straight-active.svg";
-import triangle from "./image/triangle.svg";
-import triangleActive from "./image/triangle-active.svg";
-import clear from "./image/clear.svg";
+import { IText } from 'fabric';
+import { inject, onMounted, onBeforeUnmount, ref, type Ref, watch } from 'vue';
 
-const canvas = inject<Ref<FabricCanvas>>('canvas');
+import FabricCanvas, { DrawingTool } from '@/core';
+import { readBrushSettings, type BrushSettings as BrushOptions } from '@/core/brushSettings';
+
+import BrushSettings from './BrushSettings.vue';
+import arrow from './image/arrow.svg';
+import clear from './image/clear.svg';
+import ellipse from './image/ellipse.svg';
+import eraser from './image/eraser.svg';
+import pen from './image/pencil.svg';
+import rectangle from './image/rectangle.svg';
+import selector from './image/selector.svg';
+import straight from './image/straight.svg';
+import text from './image/text.svg';
+import triangle from './image/triangle.svg';
+
+const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
+const settings = ref(readBrushSettings());
+const settingsOpen = ref(false);
+const busy = ref(false);
+const toolbarRoot = ref<HTMLElement | null>(null);
+function hasSettings(type: DrawingTool) {
+  return (
+    type === 'pencil' ||
+    type === 'text' ||
+    type === 'line' ||
+    type === 'arrow' ||
+    type === 'rectangle' ||
+    type === 'circle' ||
+    type === 'triangle' ||
+    type === 'ellipse'
+  );
+}
+function updateSettings(value: BrushOptions) {
+  canvas?.value?.setBrushSettings(value);
+}
+
+function onPointerDown(event: PointerEvent) {
+  if (!toolbarRoot.value?.contains(event.target as Node)) settingsOpen.value = false;
+}
+
+function onKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && settingsOpen.value) {
+    settingsOpen.value = false;
+    return;
+  }
+  const board = canvas?.value;
+  if (
+    !board ||
+    busy.value ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    document.activeElement !== board.getCanvas().upperCanvasEl ||
+    (board.getActiveObject() instanceof IText && (board.getActiveObject() as IText).isEditing)
+  )
+    return;
+  const tool = tools.value[Number(event.key) - 1];
+  if (tool) {
+    event.preventDefault();
+    clickAppliance(tool.shapeType);
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('keydown', onKeyDown);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown);
+  document.removeEventListener('keydown', onKeyDown);
+});
+watch(
+  () => canvas?.value,
+  (board, _, cleanup) => {
+    if (!board) return;
+    const update = () => {
+      settings.value = board.getBrushSettings();
+      currentShapType.value = board.getDrawingTool();
+      busy.value = board.getHistoryState().busy;
+    };
+    for (const event of ['settings:changed', 'tool:changed', 'history:changed'])
+      board.on(event, update);
+    update();
+    cleanup(() => {
+      for (const event of ['settings:changed', 'tool:changed', 'history:changed'])
+        board.off(event, update);
+    });
+  },
+);
 
 type Appliance = {
-    readonly name: string;
-    readonly icon: string;
-    readonly iconActive: string;
-    readonly shapeType: DrawingTool;
+  readonly name: string;
+  readonly icon: string;
+  readonly shapeType: DrawingTool;
 };
-const tools = ref<Appliance[]>([{
+const tools = ref<Appliance[]>([
+  {
     name: '选择',
     icon: selector,
-    iconActive: selectorActive,
-    shapeType: "select",
-}, {
+    shapeType: 'select',
+  },
+  {
     name: '笔',
     icon: pen,
-    iconActive: penActive,
-    shapeType: "pencil",
-},{
+    shapeType: 'pencil',
+  },
+  {
     name: '文本',
     icon: text,
-    iconActive: textActive,
-    shapeType: "text",
-},{
+    shapeType: 'text',
+  },
+  {
     name: '橡皮擦',
     icon: eraser,
-    iconActive: eraserActive,
-    shapeType: "eraser",
-},{
+    shapeType: 'eraser',
+  },
+  {
     name: '三角形',
     icon: triangle,
-    iconActive: triangleActive,
-    shapeType: "triangle",
-},{
+    shapeType: 'triangle',
+  },
+  {
     name: '圆形',
     icon: ellipse,
-    iconActive: ellipseActive,
-    shapeType: "circle",
-},{
+    shapeType: 'circle',
+  },
+  {
     name: '矩形',
     icon: rectangle,
-    iconActive: rectangleActive,
-    shapeType: "rectangle",
-},{
+    shapeType: 'rectangle',
+  },
+  {
     name: '直线',
     icon: straight,
-    iconActive: straightActive,
-    shapeType: "line",
-},{
+    shapeType: 'line',
+  },
+  {
     name: '箭头',
     icon: arrow,
-    iconActive: arrowActive,
-    shapeType: "arrow",
-}])
+    shapeType: 'arrow',
+  },
+]);
 
-const currentShapType = ref<string>("pencil");
+const currentShapType = ref<DrawingTool>('pencil');
 
 function clickAppliance(type: DrawingTool) {
-    currentShapType.value = type;
-    canvas?.value.setDrawingTool(type)
+  if (type === currentShapType.value) {
+    if (hasSettings(type)) settingsOpen.value = !settingsOpen.value;
+    return;
+  }
+  canvas?.value?.setDrawingTool(type);
+  settingsOpen.value = hasSettings(type);
 }
 
 function clickClear() {
-  canvas?.value.clearCanvas()
+  if (canvas?.value?.getObjects().length && !window.confirm('清除当前页所有批注？可通过撤销恢复。'))
+    return;
+  settingsOpen.value = false;
+  canvas?.value?.clearCanvas();
 }
 </script>
-<style lang="scss" scoped>
-.tool-mid-box {
-  height: 32px;
-  display: flex;
-  border-radius: 4px;
-  justify-content: space-between;
-  padding-left: 6px;
-  padding-right: 6px;
-  background-color: white;
-}
-
-.tool-mid-box-left {
-  width: 40px;
-  display: flex;
-  border-radius: 4px;
-  background-color: white;
-  justify-content: space-between;
-  align-items: center;
-  flex-direction: column;
-  padding-bottom: 4px;
-  padding-top: 4px;
-  box-shadow:0 8px 24px 0 rgba(0,0,0,0.1);
-}
-
-.tool-box-cell {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-}
-
-.tool-box-cell-color {
-  width: 14px;
-  height: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.24);
-}
-
-.tool-box-cell-subscript {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-}
-
-.tool-box-cell-box-left {
-  width: 32px;
-  height: 32px;
-  user-select: none;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 2px;
-  &:hover {
-    background: rgba(33,35,36,0.1);
-  }
-}
-
-.tool-box-cell-step-two {
-  height: 2px;
-  border-radius: 1px;
-  margin-top: -4px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.tool-box-cell-step-two {
-  height: 2px;
-  border-radius: 1px;
-  margin-top: -4px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.palette-box {
-  width: 188px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.palette-box-color {
-  width: 188px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.stroke-script {
-  width: 156px;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  height: 17px;
-}
-
-.stroke-script-text {
-  height: 17px;
-  font-size: 12px;
-  font-family: PingFangSC-Regular, PingFang SC, sans-serif;
-  font-weight: 400;
-  color: rgba(33, 35, 36, 1);
-  line-height: 17px;
-}
-
-.draw-tool-box-title {
-  width: 100%;
-  div {
-    font-weight: bold;
-    margin-left: 16px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-  }
-}
-
-.palette-stroke-under-layer {
-  width: 242px;
-  height: 32px;
-  position: absolute;
-  z-index: 1;
-}
-
-.palette-stroke-slider-mask {
-  width: 290px;
-  height: 32px;
-  position: absolute;
-  z-index: 3;
-  display: flex;
-  justify-content: center;
+<style scoped>
+.tool-icon {
+  mask: center / contain no-repeat;
 }
 </style>

@@ -20,7 +20,7 @@ class EventEmitter<T extends Record<EventType, unknown>> {
   }
 
   removeAllListeners() {
-    this.emitter.all.clear()
+    this.emitter.all.clear();
   }
 }
 

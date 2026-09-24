@@ -1,23 +1,19 @@
-/*
- * 控制条样式
- */
-
+/** 自定义 Fabric 对象控制点与删除按钮。 */
 import {
   util,
   Control,
   FabricObject,
   controlsUtils,
   InteractiveFabricObject,
-  Canvas,
   TPointerEvent,
   Transform,
 } from 'fabric';
 
+import edgeImg from '../assets/editor/edgecontrol.svg';
 // 资源预加载
 // 将所有图像资源在模块顶层创建并赋值src，以便它们尽快开始加载。
 import verticalImg from '../assets/editor/middlecontrol.svg';
 import horizontalImg from '../assets/editor/middlecontrolhoz.svg';
-import edgeImg from '../assets/editor/edgecontrol.svg';
 import rotateImg from '../assets/editor/rotateicon.svg';
 
 const verticalImgIcon = document.createElement('img');
@@ -38,11 +34,8 @@ const deleteIcon =
 const delImgIcon = document.createElement('img');
 delImgIcon.src = deleteIcon;
 
-function createIconRenderer(
-  icon: HTMLImageElement,
-  width: number,
-  height: number,
-) {
+/** 生成跟随对象旋转的 Fabric 控制点图标绘制器。 */
+function createIconRenderer(icon: HTMLImageElement, width: number, height: number) {
   return (
     ctx: CanvasRenderingContext2D,
     left: number,
@@ -58,8 +51,8 @@ function createIconRenderer(
   };
 }
 
-// Controls 初始化
-function initControls(canvas: Canvas) {
+/** 安装缩放、旋转与删除控制点的图标和行为。 */
+function initControls() {
   // 中间横杠
   const mlControl = new Control({
     x: -0.5,
@@ -147,13 +140,21 @@ function initControls(canvas: Canvas) {
 
   // 删除
   // 删除操作的 handler
-  function deleteObjectHandler(eventData: TPointerEvent, transform: Transform, x: number, y: number) {
+  /** 删除当前选中对象，Fabric 对象移除事件将触发历史提交。 */
+  function deleteObjectHandler(
+    _eventData: TPointerEvent,
+    transform: Transform,
+    _x: number,
+    _y: number,
+  ) {
     if (transform.action === 'rotate') return true;
-    const activeObjects = canvas.getActiveObjects();
+    const owner = transform.target.canvas;
+    if (!owner) return false;
+    const activeObjects = owner.getActiveObjects();
     if (activeObjects.length > 0) {
-        activeObjects.forEach((obj) =>  canvas.remove(obj));
-        canvas.requestRenderAll();
-        canvas.discardActiveObject();
+      activeObjects.forEach((obj) => owner.remove(obj));
+      owner.requestRenderAll();
+      owner.discardActiveObject();
     }
     return true;
   }
@@ -172,7 +173,7 @@ function initControls(canvas: Canvas) {
   });
 
   // 获取默认控件
-  const ownDefaults = InteractiveFabricObject.ownDefaults; 
+  const ownDefaults = InteractiveFabricObject.ownDefaults;
   const controls = InteractiveFabricObject.ownDefaults.controls;
 
   // 设置全局样式
@@ -202,7 +203,7 @@ function initControls(canvas: Canvas) {
       // 删除
       deleteControl: deleteControlInstance,
     },
-  }
+  };
 }
 
 export default initControls;
