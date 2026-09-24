@@ -9,13 +9,6 @@
     sans-serif;
   color: #1e293b;
   background: #f4f7fb;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
-body {
-  margin: 0;
-  min-width: 320px;
 }
 button {
   cursor: pointer;
@@ -28,7 +21,4 @@ button:focus-visible,
 input:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 3px;
-}
-img {
-  vertical-align: middle;
 }

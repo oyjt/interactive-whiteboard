@@ -51,6 +51,10 @@ async function draw(x = 400, y = 120, dx = 140, dy = 40) {
 try {
   await page.goto('http://127.0.0.1:5173/interactive-whiteboard/');
   await page.waitForSelector('.upper-canvas');
+  assert.equal(
+    await page.locator('.canvas-scroll').evaluate((el) => el.scrollWidth > el.clientWidth),
+    false,
+  );
   await page.getByText('gzip / Base64 本地模拟 · 内容变更后更新').waitFor();
   assert.equal(
     await page.locator('.tool-mid-box-left').evaluate((el) => getComputedStyle(el).flexDirection),
@@ -281,15 +285,15 @@ try {
   assert.equal(await board((b) => b.getObjects()[0].constructor.type), 'Arrow');
   await page.waitForFunction(
     () =>
-      document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects()[0]
-        ?.constructor.type === 'Arrow',
+      document.querySelector('#canvas2').getContext('2d').getImageData(524, 175, 1, 1).data[3] >
+      128,
   );
   await page.getByRole('button', { name: '撤销', exact: true }).click();
   await count(0);
   await idle();
   await page.waitForFunction(
     () =>
-      document.querySelector('#app').__vue_app__._instance.setupState.mirror.getObjects().length ===
+      document.querySelector('#canvas2').getContext('2d').getImageData(524, 175, 1, 1).data[3] ===
       0,
   );
   await page.getByRole('button', { name: '重做', exact: true }).click();
@@ -394,6 +398,17 @@ try {
   assert.deepEqual(errors, []);
   if (process.env.SCREENSHOT_PATH)
     await page.screenshot({ path: process.env.SCREENSHOT_PATH, fullPage: true });
+  await page.setViewportSize({ width: 390, height: 900 });
+  assert.deepEqual(
+    await page.evaluate(() => ({
+      pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      canvasScrolls:
+        document.querySelector('.canvas-scroll').scrollWidth >
+        document.querySelector('.canvas-scroll').clientWidth,
+    })),
+    { pageOverflows: false, canvasScrolls: true },
+  );
+  console.log('PASS desktop canvas fits and mobile scroll stays inside canvas');
   await page.evaluate(() => document.querySelector('#app').__vue_app__.unmount());
   await page.waitForTimeout(100);
   assert.deepEqual(errors, []);

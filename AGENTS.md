@@ -12,8 +12,9 @@
 
 | 路径 | 职责 |
 | --- | --- |
-| `src/App.vue` | 页面布局、画布创建和销毁、内容变化时更新同步预览。 |
+| `src/App.vue` | 唯一的页面入口：画布生命周期、工具栏布局、课件与 PNG 操作。 |
 | `src/core/index.ts` | Fabric 绘图工具、事件、场景与画布操作；内容提交通过 `content:changed` 通知外部。 |
+| `src/core/preview.ts` | 接收内容快照、模拟传输、串行加载下方预览并释放资源。 |
 | `src/core/history.ts`、`brushSettings.ts`、`objects/Arrow.ts`、`eraser.ts` | 历史、配置、可序列化箭头与橡皮擦手势。 |
 | `src/utils/previewSync.ts` | gzip、Base64 编解码的本地模拟；注释标明未来可能的发送与接收位置。 |
 | `src/components/` | 工具栏、设置、翻页、课件预览及撤销控制。 |
@@ -35,6 +36,7 @@
 ## 样式与质量门槛
 
 - 新布局和常用 UI 样式直接写在 Vue 模板的 Tailwind v4 `class` 中，不使用 `@apply`；课件面板与 Fabric 覆盖层的特殊几何样式可使用普通 CSS。全局入口放 `src/styles/index.css`，不要新增 Sass、Tailwind v3 配置或不必要的 UI 依赖。
+- 画布保持 800×450 的逻辑尺寸；窄屏只在画布容器内横向滚动，桌面宽度不应出现无意义的 2px 滚动。
 - 保留工具栏行为和可访问名称、选中态及现有页面结构。更新图标资源时检查 mask 与颜色继承。
 - 提交前运行 `pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build` 和 `pnpm test:browser`；浏览器检查会验证编码往返后的预览。无法运行某项时明确说明原因，不能将未运行写成通过。
 - 使用 Oxlint 检查 TS、JS 与 Vue 脚本，使用 Oxfmt 格式化代码；关键接口与特殊时序用中文 JSDoc 描述，不给每一行添加注释。

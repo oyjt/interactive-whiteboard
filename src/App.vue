@@ -29,7 +29,7 @@
     >
       {{ error }} <button @click="error = ''">关闭</button>
     </p>
-    <div class="canvas-scroll overflow-x-auto p-0.5">
+    <div class="canvas-scroll overflow-x-auto">
       <div
         class="canvas-wrap relative h-[450px] w-[800px] overflow-hidden rounded-lg border border-[#dbe3ee] bg-white"
       >
@@ -71,7 +71,6 @@
   </main>
 </template>
 <script setup lang="ts">
-import { StaticCanvas } from 'fabric';
 import { onMounted, onBeforeUnmount, provide, ref, shallowRef } from 'vue';
 
 import pages from './assets/images/pages.svg';
@@ -81,7 +80,7 @@ import RedoUndo from './components/RedoUndo/index.vue';
 import ToolBox from './components/ToolBox/index.vue';
 import ZoomController from './components/ZoomController/index.vue';
 import FabricCanvas from './core';
-import { simulatePreviewTransport } from './utils/previewSync';
+import { createPreview } from './core/preview';
 
 const canvas = shallowRef<FabricCanvas>();
 provide('canvas', canvas);
@@ -89,40 +88,7 @@ const isPreviewShow = ref(false);
 const hasScenes = ref(false);
 const busy = ref(false);
 const error = ref('');
-let mirror: StaticCanvas | undefined;
-let pending: ReturnType<FabricCanvas['toJSON']> | undefined;
-let syncing: Promise<void> | undefined;
-let disposed = false;
-
-/** 串行加载预览快照；上一帧尚未完成时只保留最新一帧。 */
-function renderPreview(data: ReturnType<FabricCanvas['toJSON']>) {
-  pending = data;
-  if (syncing) return;
-  syncing = (async () => {
-    while (pending && mirror && !disposed) {
-      const data = pending;
-      pending = undefined;
-      try {
-        await mirror.loadFromJSON(data);
-        if (!disposed) mirror.requestRenderAll();
-      } catch {
-        if (!disposed) error.value = '同步预览加载失败，请重新编辑后重试。';
-      }
-    }
-  })().finally(() => {
-    syncing = undefined;
-  });
-}
-
-/** 在内容提交时模拟一次编码往返，避免渲染事件触发重复传输。 */
-function syncContent(snapshot?: ReturnType<FabricCanvas['toJSON']>) {
-  if (!canvas.value || disposed) return;
-  try {
-    renderPreview(simulatePreviewTransport(snapshot ?? canvas.value.toJSON()));
-  } catch {
-    error.value = '同步数据编码或解码失败，请重新编辑后重试。';
-  }
-}
+let preview: ReturnType<typeof createPreview> | undefined;
 
 async function insertPPT() {
   if (
@@ -161,8 +127,10 @@ function exportPNG() {
 onMounted(() => {
   const board = new FabricCanvas('canvas');
   canvas.value = board;
-  mirror = new StaticCanvas('canvas2');
-  board.on('content:changed', syncContent);
+  preview = createPreview('canvas2', (message) => {
+    error.value = message;
+  });
+  board.on('content:changed', preview.sync);
   board.on('insert:images', () => {
     hasScenes.value = board.getScenes().length > 0;
   });
@@ -172,12 +140,10 @@ onMounted(() => {
   board.on('error', (message: string) => {
     error.value = message;
   });
-  syncContent();
+  preview.sync(board.toJSON());
 });
 onBeforeUnmount(() => {
-  disposed = true;
-  pending = undefined;
   void canvas.value?.destroy();
-  void (syncing ?? Promise.resolve()).finally(() => mirror?.dispose());
+  void preview?.dispose();
 });
 </script>

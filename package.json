@@ -2,6 +2,7 @@
   "name": "interactive-whiteboard",
   "version": "1.0.0",
   "private": true,
+  "description": "基于 Vue 3、Fabric 7 和 Tailwind CSS 4 的互动白板与本地模拟同步预览示例",
   "type": "module",
   "scripts": {
     "dev": "vite",
