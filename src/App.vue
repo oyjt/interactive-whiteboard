@@ -25,7 +25,7 @@
     <p v-if="error" class="rounded-md bg-rose-50 p-2.5 text-[13px] text-rose-700" role="alert">
       {{ error }} <button @click="error = ''">关闭</button>
     </p>
-    <div data-testid="canvas-scroll" class="overflow-x-auto">
+    <div data-testid="canvas-scroll" class="overflow-x-auto max-[600px]:overflow-visible">
       <div
         class="relative aspect-[16/9] w-full max-w-[800px] overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-[#dbe3ee] max-[600px]:z-[2] max-[600px]:overflow-visible"
       >

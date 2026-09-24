@@ -1,7 +1,7 @@
 <template>
   <div
     ref="toolbarRoot"
-    class="relative flex items-center gap-2 max-[600px]:flex-col max-[600px]:items-start"
+    class="flex items-center gap-2 max-[600px]:flex-col max-[600px]:items-start"
   >
     <div
       class="flex w-10 flex-col items-center rounded-md bg-white py-1 shadow-md max-[600px]:w-auto max-[600px]:max-w-[calc(100vw-40px)] max-[600px]:flex-row max-[600px]:overflow-x-auto max-[600px]:px-1"
@@ -47,23 +47,18 @@
         <img class="h-6 w-6" :src="clear" alt="" />
       </button>
     </div>
-    <div
+    <BrushSettings
       v-if="settingsOpen && hasSettings(currentShapType)"
-      ref="settingsPanel"
-      class="absolute z-[5]"
-      :style="panelPosition"
-    >
-      <BrushSettings
-        :model-value="settings"
-        :tool="currentShapType"
-        @update:model-value="updateSettings"
-      />
-    </div>
+      class="max-[600px]:absolute max-[600px]:top-11 max-[600px]:left-0 max-[600px]:z-[5]"
+      :model-value="settings"
+      :tool="currentShapType"
+      @update:model-value="updateSettings"
+    />
   </div>
 </template>
 <script setup lang="ts">
 import { IText } from 'fabric';
-import { inject, nextTick, onMounted, onBeforeUnmount, ref, type Ref, watch } from 'vue';
+import { inject, onMounted, onBeforeUnmount, ref, type Ref, watch } from 'vue';
 
 import FabricCanvas, { DrawingTool } from '@/core';
 import { readBrushSettings, type BrushSettings as BrushOptions } from '@/core/brushSettings';
@@ -83,39 +78,8 @@ import triangle from './image/triangle.svg';
 const canvas = inject<Ref<FabricCanvas | undefined>>('canvas');
 const settings = ref(readBrushSettings());
 const settingsOpen = ref(false);
-const currentShapType = ref<DrawingTool>('pencil');
 const busy = ref(false);
 const toolbarRoot = ref<HTMLElement | null>(null);
-const settingsPanel = ref<HTMLElement | null>(null);
-const panelPosition = ref({ top: '0px', left: '48px' });
-
-/** 将配置面板贴近当前按钮，同时避免桌面画布裁切或手机屏幕横向溢出。 */
-function positionSettings() {
-  const root = toolbarRoot.value;
-  const panel = settingsPanel.value;
-  const button = root?.querySelector<HTMLElement>('button[aria-pressed="true"]');
-  const frame = root?.parentElement?.parentElement;
-  if (!root || !panel || !button || !frame) return;
-  const rootRect = root.getBoundingClientRect();
-  const buttonRect = button.getBoundingClientRect();
-  const frameRect = frame.getBoundingClientRect();
-  if (window.matchMedia('(max-width: 600px)').matches) {
-    panelPosition.value = {
-      top: `${rootRect.height + 8}px`,
-      left: `${Math.max(0, Math.min(buttonRect.left - rootRect.left, frameRect.right - rootRect.left - panel.offsetWidth - 8))}px`,
-    };
-  } else {
-    panelPosition.value = {
-      top: `${Math.max(0, Math.min(buttonRect.top - rootRect.top, frameRect.bottom - rootRect.top - panel.offsetHeight - 8))}px`,
-      left: '48px',
-    };
-  }
-}
-
-watch([settingsOpen, currentShapType], async () => {
-  await nextTick();
-  positionSettings();
-});
 function hasSettings(type: DrawingTool) {
   return (
     type === 'pencil' ||
@@ -163,12 +127,10 @@ function onKeyDown(event: KeyboardEvent) {
 onMounted(() => {
   document.addEventListener('pointerdown', onPointerDown);
   document.addEventListener('keydown', onKeyDown);
-  window.addEventListener('resize', positionSettings);
 });
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onPointerDown);
   document.removeEventListener('keydown', onKeyDown);
-  window.removeEventListener('resize', positionSettings);
 });
 watch(
   () => canvas?.value,
@@ -241,6 +203,8 @@ const tools = ref<Appliance[]>([
     shapeType: 'arrow',
   },
 ]);
+
+const currentShapType = ref<DrawingTool>('pencil');
 
 function clickAppliance(type: DrawingTool) {
   if (type === currentShapType.value) {

@@ -1,65 +1,100 @@
 <template>
   <section
-    class="w-44 rounded-md border border-slate-200 bg-white/95 p-2 text-slate-700 shadow-[0_6px_20px_#0f172a26] backdrop-blur-sm"
+    class="w-[210px] rounded-xl border border-slate-200 bg-white p-4 text-left text-slate-800 shadow-lg max-[600px]:max-h-[calc(100dvh-160px)] max-[600px]:max-w-[calc(100vw-32px)] max-[600px]:overflow-y-auto max-[600px]:overscroll-contain"
     :aria-label="`${toolName}设置`"
   >
-    <div class="flex items-center gap-2">
-      <label class="sr-only" :for="sliderId">
-        {{ tool === 'text' ? '文字大小' : tool === 'pencil' ? '画笔尺寸' : '线宽' }}
-      </label>
-      <input
-        :id="sliderId"
-        class="h-5 min-w-0 flex-1 cursor-pointer accent-blue-600"
-        type="range"
-        :min="tool === 'text' ? 12 : 1"
-        :max="tool === 'text' ? 96 : 40"
-        step="1"
-        :value="tool === 'text' ? model.fontSize : model.width"
-        @input="updateSize(Number(($event.target as HTMLInputElement).value))"
-      />
-      <output class="w-9 text-right text-[11px] tabular-nums text-slate-500">
-        {{ tool === 'text' ? model.fontSize : model.width }} px
-      </output>
+    <div class="mb-4 text-sm font-semibold">{{ toolName }}设置</div>
+    <label class="my-2.5 flex items-center justify-between text-xs" :for="sliderId">
+      {{ tool === 'text' ? '文字大小' : tool === 'pencil' ? '画笔尺寸' : '线宽' }}
+      <output class="tabular-nums text-slate-500"
+        >{{ tool === 'text' ? model.fontSize : model.width }} px</output
+      >
+    </label>
+    <input
+      :id="sliderId"
+      class="w-full cursor-pointer accent-blue-600"
+      type="range"
+      :min="tool === 'text' ? 12 : 1"
+      :max="tool === 'text' ? 96 : 40"
+      step="1"
+      :value="tool === 'text' ? model.fontSize : model.width"
+      @input="updateSize(Number(($event.target as HTMLInputElement).value))"
+    />
+    <div class="mt-2 mb-[18px] flex gap-1.5">
+      <button
+        v-for="size in tool === 'text' ? [16, 24, 32, 48] : [2, 5, 10, 20]"
+        :key="size"
+        class="flex-1 rounded-md border border-slate-200 py-1 text-xs aria-pressed:border-blue-300 aria-pressed:bg-blue-50 aria-pressed:text-blue-700"
+        type="button"
+        :aria-pressed="(tool === 'text' ? model.fontSize : model.width) === size"
+        @click="updateSize(size)"
+      >
+        {{ size }}
+      </button>
     </div>
-    <div class="my-2 h-px bg-slate-200"></div>
-    <div
-      class="grid grid-cols-4 justify-items-center gap-1"
-      role="group"
-      :aria-label="`${toolName}颜色`"
-    >
+    <div class="my-2.5 flex items-center justify-between text-xs">
+      {{ tool === 'text' ? '文字颜色' : tool === 'pencil' ? '画笔颜色' : '线条颜色' }}
+      <span class="tabular-nums text-slate-500">{{ model.color.toUpperCase() }}</span>
+    </div>
+    <div class="flex flex-wrap gap-2">
       <button
         v-for="color in colors"
         :key="color"
-        class="flex h-7 w-7 items-center justify-center rounded border border-transparent hover:bg-slate-100 aria-pressed:border-blue-600"
+        class="h-[26px] w-[26px] rounded-full border border-slate-300 aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-blue-600"
         type="button"
         :aria-label="`选择颜色 ${color}`"
         :aria-pressed="model.color === color"
+        :style="{ backgroundColor: color }"
         @click="updateColor(color)"
       >
         <span
-          class="h-4 w-4 rounded-[3px] border border-slate-200/70"
-          :style="{ backgroundColor: color }"
-          aria-hidden="true"
-        ></span>
+          v-if="model.color === color"
+          :style="{ color: color === '#ffffff' || color === '#facc15' ? '#111827' : '#fff' }"
+          >✓</span
+        >
       </button>
-      <label
-        class="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded border border-slate-200 hover:bg-slate-100"
-        title="自定义颜色"
-      >
-        <span
-          class="h-4 w-4 rounded-[3px] border border-slate-300"
-          :style="{ backgroundColor: model.color }"
-          aria-hidden="true"
-        ></span>
+      <label class="flex items-center gap-2 text-xs text-slate-500"
+        >自定义
         <input
-          class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          class="h-[26px] w-8 cursor-pointer border-0 bg-transparent p-0"
           :aria-label="`${toolName}自定义颜色`"
           type="color"
           :value="model.color"
           @input="updateColor(($event.target as HTMLInputElement).value)"
-        />
-      </label>
+      /></label>
     </div>
+    <div
+      class="mt-3.5 flex h-20 items-center justify-center overflow-hidden rounded-lg bg-slate-100"
+      :aria-label="`${toolName}预览`"
+    >
+      <span v-if="tool === 'text'" :style="{ color: model.color, fontSize: `${model.fontSize}px` }"
+        >文字 Aa</span
+      >
+      <svg
+        v-else
+        class="h-[70px] w-full"
+        viewBox="0 0 180 60"
+        role="img"
+        aria-label="当前颜色和粗细"
+      >
+        <path
+          :d="tool === 'pencil' ? 'M25 35 Q55 10 90 30 T155 25' : 'M25 30 L155 30'"
+          fill="none"
+          :stroke="model.color"
+          :stroke-width="model.width"
+          stroke-linecap="round"
+        />
+      </svg>
+    </div>
+    <p class="mt-2.5 text-[11px] text-slate-500">
+      {{
+        tool === 'text'
+          ? '点击输入；拖动可指定换行宽度'
+          : tool === 'pencil'
+            ? '应用于下一笔，已有内容不变'
+            : '应用于新绘制的图形，已有内容不变'
+      }}
+    </p>
   </section>
 </template>
 <script setup lang="ts">
